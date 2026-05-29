@@ -1,0 +1,90 @@
+{
+  "name": "securepatch-ai",
+  "displayName": "SecurePatch AI",
+  "description": "Detects basic security issues in source and dependency files while you code.",
+  "version": "0.0.1",
+  "publisher": "securepatch-ai",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "workspaceContains:package.json",
+    "workspaceContains:requirements.txt",
+    "onCommand:securepatch.scanWorkspace",
+    "onCommand:securepatch.clearFindings",
+    "onCommand:securepatch.showFindingDetails",
+    "onCommand:securepatch.openFinding"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "securepatch.scanWorkspace",
+        "title": "SecurePatch AI: Scan Workspace"
+      },
+      {
+        "command": "securepatch.clearFindings",
+        "title": "SecurePatch AI: Clear Findings"
+      },
+      {
+        "command": "securepatch.showFindingDetails",
+        "title": "SecurePatch AI: Show Finding Details"
+      },
+      {
+        "command": "securepatch.openFinding",
+        "title": "SecurePatch AI: Open Finding"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "securepatch.findings",
+          "name": "SecurePatch AI Findings"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "securepatch.scanWorkspace",
+          "when": "view == securepatch.findings",
+          "group": "navigation"
+        },
+        {
+          "command": "securepatch.clearFindings",
+          "when": "view == securepatch.findings",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "securepatch.showFindingDetails",
+          "when": "view == securepatch.findings && viewItem == securepatchFinding",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^7.13.1",
+    "@typescript-eslint/parser": "^7.13.1",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  }
+}
