@@ -3,21 +3,21 @@ import * as vscode from "vscode";
 import { SecurityFinding } from "../types/finding";
 import { FindingsStore } from "./findingsStore";
 
-type TreeItem = FileNode | FindingNode;
+export type SecurePatchTreeItem = FileNode | FindingNode;
 
-interface FileNode {
+export interface FileNode {
   kind: "file";
   filePath: string;
   findings: SecurityFinding[];
 }
 
-interface FindingNode {
+export interface FindingNode {
   kind: "finding";
   finding: SecurityFinding;
 }
 
-export class FindingsTreeProvider implements vscode.TreeDataProvider<TreeItem> {
-  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<TreeItem | undefined | null | void>();
+export class FindingsTreeProvider implements vscode.TreeDataProvider<SecurePatchTreeItem> {
+  private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<SecurePatchTreeItem | undefined | null | void>();
 
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
@@ -29,7 +29,7 @@ export class FindingsTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     this.onDidChangeTreeDataEmitter.fire();
   }
 
-  getTreeItem(element: TreeItem): vscode.TreeItem {
+  getTreeItem(element: SecurePatchTreeItem): vscode.TreeItem {
     if (element.kind === "file") {
       const item = new vscode.TreeItem(
         `${path.basename(element.filePath)} (${element.findings.length})`,
@@ -59,7 +59,7 @@ export class FindingsTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     return item;
   }
 
-  getChildren(element?: TreeItem): TreeItem[] {
+  getChildren(element?: SecurePatchTreeItem): SecurePatchTreeItem[] {
     if (element?.kind === "file") {
       return element.findings.map((finding) => ({ kind: "finding", finding }));
     }

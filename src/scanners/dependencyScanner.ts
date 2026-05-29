@@ -63,7 +63,10 @@ export async function scanDependencies(filePath: string, content: string): Promi
   for (const dependency of dependencies) {
     try {
       const vulns = await queryOsv(dependency);
-      findings.push(...vulns.map((vulnerability) => createOsvFinding(filePath, dependency, vulnerability)));
+      const finding = createOsvFinding(filePath, dependency, vulns);
+      if (finding) {
+        findings.push(finding);
+      }
     } catch {
       apiFailed = true;
     }
@@ -174,16 +177,24 @@ function queryOsv(dependency: ParsedDependency): Promise<OsvVulnerability[]> {
 function createOsvFinding(
   filePath: string,
   dependency: ParsedDependency,
-  vulnerability: OsvVulnerability
-): SecurityFinding {
-  const fixedVersion = findFixedVersion(vulnerability, dependency);
-  const summary = vulnerability.summary ?? vulnerability.details ?? "OSV reported a vulnerability for this dependency.";
+  vulnerabilities: OsvVulnerability[]
+): SecurityFinding | undefined {
+  if (vulnerabilities.length === 0) {
+    return undefined;
+  }
+
+  const fixedVersion = findBestFixedVersion(vulnerabilities, dependency);
+  const vulnerabilityIds = vulnerabilities.map((vulnerability) => vulnerability.id);
+  const vulnerabilitySummaries = vulnerabilities.map((vulnerability) => ({
+    id: vulnerability.id,
+    summary: vulnerability.summary ?? vulnerability.details ?? "No summary provided."
+  }));
 
   return {
-    id: vulnerability.id,
+    id: `osv-${dependency.ecosystem}-${dependency.name}-${dependency.version}`,
     type: "vulnerable-dependency",
     title: `Vulnerable dependency: ${dependency.name}`,
-    description: `${vulnerability.id}: ${summary} Affected package: ${dependency.name}. Current version: ${dependency.version}.`,
+    description: `OSV reported ${vulnerabilities.length} vulnerability finding(s) for ${dependency.name} ${dependency.version}.`,
     severity: "high",
     filePath,
     line: dependency.line,
@@ -192,8 +203,24 @@ function createOsvFinding(
     recommendation: fixedVersion
       ? `Upgrade ${dependency.name} to ${fixedVersion} or newer.`
       : `Upgrade ${dependency.name} to a non-vulnerable version recommended by OSV or the package maintainer.`,
-    source: "dependency"
+    source: "dependency",
+    metadata: {
+      packageName: dependency.name,
+      currentVersion: dependency.version,
+      vulnerabilityCount: vulnerabilities.length,
+      vulnerabilityIds,
+      vulnerabilitySummaries,
+      fixedVersion
+    }
   };
+}
+
+function findBestFixedVersion(vulnerabilities: OsvVulnerability[], dependency: ParsedDependency): string | undefined {
+  const fixedVersions = vulnerabilities
+    .map((vulnerability) => findFixedVersion(vulnerability, dependency))
+    .filter((version): version is string => Boolean(version));
+
+  return fixedVersions.sort(compareVersions).at(-1);
 }
 
 function findFixedVersion(vulnerability: OsvVulnerability, dependency: ParsedDependency): string | undefined {

@@ -5,11 +5,11 @@ import subprocess
 
 user_input = input("Name: ")
 
-password = "super-secret-password"
+password = os.environ.get("PASSWORD")
 
 os.system("ls " + user_input)
 
-subprocess.run("cat " + user_input, shell=True)
+subprocess.run(["cat", user_input])
 
 token = random.random()
 

@@ -13,9 +13,9 @@ export class SecurePatchCodeActionProvider implements vscode.CodeActionProvider 
     return this.store
       .getByFile(document.uri.fsPath)
       .filter((finding) => finding.line === range.start.line)
-      .map((finding) => {
+      .flatMap((finding) => {
         const action = new vscode.CodeAction(
-          `[SP] ${finding.recommendation}`,
+          `[SP] View finding details`,
           vscode.CodeActionKind.QuickFix
         );
         action.diagnostics = [];
@@ -25,7 +25,16 @@ export class SecurePatchCodeActionProvider implements vscode.CodeActionProvider 
           arguments: [finding]
         };
         action.isPreferred = false;
-        return action;
+        const aiAction = new vscode.CodeAction(
+          `[SP] Explain and suggest fix with AI`,
+          vscode.CodeActionKind.QuickFix
+        );
+        aiAction.command = {
+          command: "securepatch.explainFindingWithAi",
+          title: "Explain Finding With AI",
+          arguments: [finding]
+        };
+        return [action, aiAction];
       });
   }
 }

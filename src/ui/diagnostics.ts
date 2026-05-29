@@ -36,7 +36,7 @@ function toDiagnostic(finding: SecurityFinding): vscode.Diagnostic {
   diagnostic.relatedInformation = [
     new vscode.DiagnosticRelatedInformation(
       new vscode.Location(vscode.Uri.file(finding.filePath), range),
-      `[SP] ${finding.description}`
+      finding.description
     )
   ];
 

@@ -20,7 +20,16 @@
     "onCommand:securepatch.scanWorkspace",
     "onCommand:securepatch.clearFindings",
     "onCommand:securepatch.showFindingDetails",
-    "onCommand:securepatch.openFinding"
+    "onCommand:securepatch.openFinding",
+    "onCommand:securepatch.explainFindingWithAi",
+    "onCommand:securepatch.setOpenAiApiKey",
+    "onCommand:securepatch.clearOpenAiApiKey",
+    "onCommand:securepatch.setOpenAiModel",
+    "onCommand:securepatch.viewAiFix",
+    "onCommand:securepatch.acceptAiFix",
+    "onCommand:securepatch.rejectAiFix",
+    "onCommand:securepatch.acceptLatestAiFix",
+    "onCommand:securepatch.rejectLatestAiFix"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -40,6 +49,42 @@
       {
         "command": "securepatch.openFinding",
         "title": "SecurePatch AI: Open Finding"
+      },
+      {
+        "command": "securepatch.explainFindingWithAi",
+        "title": "SecurePatch AI: Explain Finding With AI"
+      },
+      {
+        "command": "securepatch.setOpenAiApiKey",
+        "title": "SecurePatch AI: Set OpenAI API Key"
+      },
+      {
+        "command": "securepatch.clearOpenAiApiKey",
+        "title": "SecurePatch AI: Clear OpenAI API Key"
+      },
+      {
+        "command": "securepatch.setOpenAiModel",
+        "title": "SecurePatch AI: Set OpenAI Model"
+      },
+      {
+        "command": "securepatch.viewAiFix",
+        "title": "SecurePatch AI: View AI Fix"
+      },
+      {
+        "command": "securepatch.acceptAiFix",
+        "title": "SecurePatch AI: Accept AI Fix"
+      },
+      {
+        "command": "securepatch.rejectAiFix",
+        "title": "SecurePatch AI: Reject AI Fix"
+      },
+      {
+        "command": "securepatch.acceptLatestAiFix",
+        "title": "SecurePatch AI: Apply Latest AI Fix"
+      },
+      {
+        "command": "securepatch.rejectLatestAiFix",
+        "title": "SecurePatch AI: Reject Latest AI Fix"
       }
     ],
     "views": {
@@ -68,6 +113,21 @@
           "command": "securepatch.showFindingDetails",
           "when": "view == securepatch.findings && viewItem == securepatchFinding",
           "group": "inline"
+        },
+        {
+          "command": "securepatch.explainFindingWithAi",
+          "when": "view == securepatch.findings && viewItem == securepatchFinding",
+          "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "securepatch.acceptLatestAiFix",
+          "group": "navigation"
+        },
+        {
+          "command": "securepatch.rejectLatestAiFix",
+          "group": "navigation"
         }
       ]
     }

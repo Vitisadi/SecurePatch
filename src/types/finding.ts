@@ -14,4 +14,15 @@ export interface SecurityFinding {
   codeSnippet: string;
   recommendation: string;
   source: FindingSource;
+  metadata?: {
+    packageName?: string;
+    currentVersion?: string;
+    vulnerabilityCount?: number;
+    vulnerabilityIds?: string[];
+    vulnerabilitySummaries?: Array<{
+      id: string;
+      summary: string;
+    }>;
+    fixedVersion?: string;
+  };
 }
