@@ -1,10 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const child_process_1 = require("child_process");
+import { exec } from "child_process";
+
 const userInput = String(req.query.name);
+
 document.body.innerHTML = userInput;
+
 const resetToken = Math.random().toString(36);
+
 const api_key = "test-api-key-123456789";
+
 const query = `SELECT * FROM accounts WHERE email = ${userInput}`;
-(0, child_process_1.exec)("git log --author=" + userInput);
-//# sourceMappingURL=test.js.map
+
+exec("git log --author=" + userInput);

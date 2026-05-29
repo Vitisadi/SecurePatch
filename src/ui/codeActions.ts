@@ -15,7 +15,7 @@ export class SecurePatchCodeActionProvider implements vscode.CodeActionProvider 
       .filter((finding) => finding.line === range.start.line)
       .map((finding) => {
         const action = new vscode.CodeAction(
-          `SecurePatch AI: ${finding.recommendation}`,
+          `[SP] ${finding.recommendation}`,
           vscode.CodeActionKind.QuickFix
         );
         action.diagnostics = [];

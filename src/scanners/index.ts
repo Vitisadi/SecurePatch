@@ -11,7 +11,7 @@ export function isSupportedFile(filePath: string): boolean {
   return supportedSourceExtensions.has(path.extname(filePath).toLowerCase()) || supportedDependencyFiles.has(baseName);
 }
 
-export function scanFile(filePath: string, content: string): SecurityFinding[] {
+export async function scanFile(filePath: string, content: string): Promise<SecurityFinding[]> {
   const baseName = path.basename(filePath).toLowerCase();
 
   if (supportedDependencyFiles.has(baseName)) {

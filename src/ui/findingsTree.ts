@@ -44,11 +44,11 @@ export class FindingsTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 
     const finding = element.finding;
     const item = new vscode.TreeItem(
-      `${finding.severity.toUpperCase()}: ${finding.title}`,
+      `[SP] ${finding.severity.toUpperCase()}: ${finding.title}`,
       vscode.TreeItemCollapsibleState.None
     );
     item.description = `line ${finding.line + 1}`;
-    item.tooltip = `${finding.description}\n\nRecommendation: ${finding.recommendation}`;
+    item.tooltip = `[SP] ${finding.description}\n\nRecommendation: ${finding.recommendation}`;
     item.contextValue = "securepatchFinding";
     item.iconPath = new vscode.ThemeIcon(iconForSeverity(finding.severity));
     item.command = {

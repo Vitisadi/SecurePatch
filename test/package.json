@@ -1,0 +1,13 @@
+{
+  "name": "securepatch-ai-dependency-test",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "lodash": "4.17.20",
+    "express": "4.16.0",
+    "axios": "0.21.1"
+  },
+  "devDependencies": {
+    "minimist": "0.0.8"
+  }
+}

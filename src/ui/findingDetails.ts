@@ -13,13 +13,13 @@ export async function openFinding(finding: SecurityFinding): Promise<void> {
 
 export async function showFindingDetails(finding: SecurityFinding | undefined): Promise<void> {
   if (!finding) {
-    vscode.window.showInformationMessage("Select a SecurePatch AI finding first.");
+    vscode.window.showInformationMessage("[SP] Select a SecurePatch AI finding first.");
     return;
   }
 
   const panel = vscode.window.createWebviewPanel(
     "securepatchFindingDetails",
-    "SecurePatch AI Finding Details",
+    "[SP] SecurePatch AI Finding Details",
     vscode.ViewColumn.Beside,
     { enableScripts: false }
   );
@@ -43,7 +43,7 @@ function renderFindingDetails(finding: SecurityFinding): string {
   </style>
 </head>
 <body>
-  <h1>${escapeHtml(finding.title)}</h1>
+  <h1>[SP] ${escapeHtml(finding.title)}</h1>
   <dl>
     <dt>Severity</dt><dd>${escapeHtml(finding.severity)}</dd>
     <dt>File</dt><dd>${escapeHtml(finding.filePath)}</dd>

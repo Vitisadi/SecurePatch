@@ -1,11 +1,42 @@
 import * as path from "path";
 import { SecurityFinding } from "../types/finding";
 
+interface ParsedDependency {
+  name: string;
+  version: string;
+  ecosystem: "npm" | "PyPI";
+  line: number;
+  column: number;
+}
+
 interface DependencyRule {
   packageName: string;
   safeVersion: string;
-  ecosystem: "npm" | "pypi";
+  ecosystem: "npm" | "PyPI";
 }
+
+interface OsvQueryResponse {
+  vulns?: OsvVulnerability[];
+}
+
+interface OsvVulnerability {
+  id: string;
+  summary?: string;
+  details?: string;
+  affected?: Array<{
+    package?: {
+      name?: string;
+      ecosystem?: string;
+    };
+    ranges?: Array<{
+      events?: Array<{
+        fixed?: string;
+      }>;
+    }>;
+  }>;
+}
+
+const osvCache = new Map<string, Promise<OsvVulnerability[]>>();
 
 const npmRules: DependencyRule[] = [
   { packageName: "express", safeVersion: "4.18.0", ecosystem: "npm" },
@@ -14,26 +45,52 @@ const npmRules: DependencyRule[] = [
 ];
 
 const pythonRules: DependencyRule[] = [
-  { packageName: "django", safeVersion: "3.2.0", ecosystem: "pypi" },
-  { packageName: "flask", safeVersion: "2.2.0", ecosystem: "pypi" },
-  { packageName: "requests", safeVersion: "2.31.0", ecosystem: "pypi" }
+  { packageName: "django", safeVersion: "3.2.0", ecosystem: "PyPI" },
+  { packageName: "flask", safeVersion: "2.2.0", ecosystem: "PyPI" },
+  { packageName: "requests", safeVersion: "2.31.0", ecosystem: "PyPI" }
 ];
 
-export function scanDependencies(filePath: string, content: string): SecurityFinding[] {
+export async function scanDependencies(filePath: string, content: string): Promise<SecurityFinding[]> {
+  const dependencies = parseDependencies(filePath, content);
+
+  if (dependencies.length === 0) {
+    return [];
+  }
+
+  const findings: SecurityFinding[] = [];
+  let apiFailed = false;
+
+  for (const dependency of dependencies) {
+    try {
+      const vulns = await queryOsv(dependency);
+      findings.push(...vulns.map((vulnerability) => createOsvFinding(filePath, dependency, vulnerability)));
+    } catch {
+      apiFailed = true;
+    }
+  }
+
+  if (apiFailed) {
+    findings.push(...scanMockDependencies(filePath, dependencies));
+  }
+
+  return dedupeFindings(findings);
+}
+
+function parseDependencies(filePath: string, content: string): ParsedDependency[] {
   const baseName = path.basename(filePath).toLowerCase();
 
   if (baseName === "package.json") {
-    return scanPackageJson(filePath, content);
+    return parsePackageJsonDependencies(content);
   }
 
   if (baseName === "requirements.txt") {
-    return scanRequirementsTxt(filePath, content);
+    return parseRequirementsDependencies(content);
   }
 
   return [];
 }
 
-function scanPackageJson(filePath: string, content: string): SecurityFinding[] {
+function parsePackageJsonDependencies(content: string): ParsedDependency[] {
   try {
     const parsed = JSON.parse(content) as {
       dependencies?: Record<string, string>;
@@ -44,23 +101,24 @@ function scanPackageJson(filePath: string, content: string): SecurityFinding[] {
       ...parsed.devDependencies
     };
 
-    return npmRules.flatMap((rule) => {
-      const version = dependencies[rule.packageName];
-      if (!version || !isVersionBelow(version, rule.safeVersion)) {
-        return [];
-      }
-
-      const location = findLineAndColumn(content, `"${rule.packageName}"`);
-      return [createDependencyFinding(filePath, rule, version, location.line, location.column)];
+    return Object.entries(dependencies).map(([name, rawVersion]) => {
+      const location = findLineAndColumn(content, `"${name}"`);
+      return {
+        name,
+        version: normalizeVersionString(rawVersion),
+        ecosystem: "npm",
+        line: location.line,
+        column: location.column
+      };
     });
   } catch {
     return [];
   }
 }
 
-function scanRequirementsTxt(filePath: string, content: string): SecurityFinding[] {
+function parseRequirementsDependencies(content: string): ParsedDependency[] {
+  const dependencies: ParsedDependency[] = [];
   const lines = content.split(/\r?\n/);
-  const findings: SecurityFinding[] = [];
 
   lines.forEach((lineText, index) => {
     const match = lineText.match(/^\s*([A-Za-z0-9_.-]+)\s*==\s*([^\s#]+)/);
@@ -68,63 +126,168 @@ function scanRequirementsTxt(filePath: string, content: string): SecurityFinding
       return;
     }
 
-    const packageName = match[1].toLowerCase();
-    const version = match[2];
-    const rule = pythonRules.find((candidate) => candidate.packageName === packageName);
-
-    if (rule && isVersionBelow(version, rule.safeVersion)) {
-      findings.push(createDependencyFinding(filePath, rule, version, index, lineText.indexOf(match[1])));
-    }
+    dependencies.push({
+      name: match[1],
+      version: normalizeVersionString(match[2]),
+      ecosystem: "PyPI",
+      line: index,
+      column: lineText.indexOf(match[1])
+    });
   });
 
-  return findings;
+  return dependencies;
 }
 
-function createDependencyFinding(
+function queryOsv(dependency: ParsedDependency): Promise<OsvVulnerability[]> {
+  const cacheKey = `${dependency.ecosystem}:${dependency.name}@${dependency.version}`.toLowerCase();
+  const cached = osvCache.get(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const request = fetch("https://api.osv.dev/v1/query", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      version: dependency.version,
+      package: {
+        name: dependency.name,
+        ecosystem: dependency.ecosystem
+      }
+    })
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`OSV request failed with ${response.status}`);
+    }
+
+    const body = await response.json() as OsvQueryResponse;
+    return body.vulns ?? [];
+  });
+
+  osvCache.set(cacheKey, request);
+  return request;
+}
+
+function createOsvFinding(
   filePath: string,
-  rule: DependencyRule,
-  currentVersion: string,
-  line: number,
-  column: number
+  dependency: ParsedDependency,
+  vulnerability: OsvVulnerability
 ): SecurityFinding {
+  const fixedVersion = findFixedVersion(vulnerability, dependency);
+  const summary = vulnerability.summary ?? vulnerability.details ?? "OSV reported a vulnerability for this dependency.";
+
   return {
-    id: `${rule.ecosystem}-${rule.packageName}-outdated`,
+    id: vulnerability.id,
     type: "vulnerable-dependency",
-    title: `Outdated dependency: ${rule.packageName}`,
-    description: `${rule.packageName} ${currentVersion} is older than the mocked safe version ${rule.safeVersion}.`,
+    title: `Vulnerable dependency: ${dependency.name}`,
+    description: `${vulnerability.id}: ${summary} Affected package: ${dependency.name}. Current version: ${dependency.version}.`,
     severity: "high",
     filePath,
-    line,
-    column,
-    codeSnippet: `${rule.packageName}@${currentVersion}`,
-    recommendation: `Upgrade ${rule.packageName} to ${rule.safeVersion} or newer.`,
+    line: dependency.line,
+    column: dependency.column,
+    codeSnippet: `${dependency.name}@${dependency.version}`,
+    recommendation: fixedVersion
+      ? `Upgrade ${dependency.name} to ${fixedVersion} or newer.`
+      : `Upgrade ${dependency.name} to a non-vulnerable version recommended by OSV or the package maintainer.`,
     source: "dependency"
   };
 }
 
-function isVersionBelow(rawVersion: string, safeVersion: string): boolean {
-  const current = normalizeVersion(rawVersion);
-  const safe = normalizeVersion(safeVersion);
+function findFixedVersion(vulnerability: OsvVulnerability, dependency: ParsedDependency): string | undefined {
+  const fixedVersions = vulnerability.affected
+    ?.filter((affected) => {
+      const affectedPackage = affected.package;
+      return !affectedPackage?.name ||
+        affectedPackage.name.toLowerCase() === dependency.name.toLowerCase();
+    })
+    .flatMap((affected) => affected.ranges ?? [])
+    .flatMap((range) => range.events ?? [])
+    .map((event) => event.fixed)
+    .filter((version): version is string => Boolean(version));
 
-  for (let index = 0; index < Math.max(current.length, safe.length); index++) {
-    const currentPart = current[index] ?? 0;
-    const safePart = safe[index] ?? 0;
+  return fixedVersions?.sort(compareVersions)[0];
+}
 
-    if (currentPart < safePart) {
-      return true;
+function scanMockDependencies(filePath: string, dependencies: ParsedDependency[]): SecurityFinding[] {
+  const rules = [...npmRules, ...pythonRules];
+
+  return dependencies.flatMap((dependency) => {
+    const rule = rules.find((candidate) =>
+      candidate.ecosystem === dependency.ecosystem &&
+      candidate.packageName.toLowerCase() === dependency.name.toLowerCase()
+    );
+
+    if (!rule || !isVersionBelow(dependency.version, rule.safeVersion)) {
+      return [];
     }
 
-    if (currentPart > safePart) {
+    return [createMockFinding(filePath, dependency, rule)];
+  });
+}
+
+function createMockFinding(
+  filePath: string,
+  dependency: ParsedDependency,
+  rule: DependencyRule
+): SecurityFinding {
+  return {
+    id: `${rule.ecosystem.toLowerCase()}-${rule.packageName}-outdated`,
+    type: "vulnerable-dependency",
+    title: `Outdated dependency: ${rule.packageName}`,
+    description: `${rule.packageName} ${dependency.version} is older than the offline fallback safe version ${rule.safeVersion}.`,
+    severity: "high",
+    filePath,
+    line: dependency.line,
+    column: dependency.column,
+    codeSnippet: `${dependency.name}@${dependency.version}`,
+    recommendation: `Upgrade ${dependency.name} to ${rule.safeVersion} or newer.`,
+    source: "dependency"
+  };
+}
+
+function dedupeFindings(findings: SecurityFinding[]): SecurityFinding[] {
+  const seen = new Set<string>();
+
+  return findings.filter((finding) => {
+    const key = `${finding.filePath}:${finding.line}:${finding.column}:${finding.id}`;
+    if (seen.has(key)) {
       return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function normalizeVersionString(version: string): string {
+  return version.replace(/^[~^<>=\s]+/, "").trim();
+}
+
+function isVersionBelow(rawVersion: string, safeVersion: string): boolean {
+  return compareVersions(rawVersion, safeVersion) < 0;
+}
+
+function compareVersions(leftVersion: string, rightVersion: string): number {
+  const left = normalizeVersion(leftVersion);
+  const right = normalizeVersion(rightVersion);
+
+  for (let index = 0; index < Math.max(left.length, right.length); index++) {
+    const leftPart = left[index] ?? 0;
+    const rightPart = right[index] ?? 0;
+
+    if (leftPart !== rightPart) {
+      return leftPart - rightPart;
     }
   }
 
-  return false;
+  return 0;
 }
 
 function normalizeVersion(version: string): number[] {
-  return version
-    .replace(/^[~^<>=\s]+/, "")
+  return normalizeVersionString(version)
     .split(".")
     .map((part) => Number.parseInt(part.replace(/\D.*$/, ""), 10))
     .map((part) => Number.isNaN(part) ? 0 : part);

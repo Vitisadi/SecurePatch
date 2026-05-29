@@ -38,13 +38,13 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("securepatch.scanWorkspace", async () => {
       const findings = await scanWorkspace(diagnostics, findingsStore);
       printFindings(output, findings);
-      vscode.window.showInformationMessage(`SecurePatch AI scan complete: ${findings.length} finding(s).`);
+      vscode.window.showInformationMessage(`[SP] SecurePatch AI scan complete: ${findings.length} finding(s).`);
     }),
     vscode.commands.registerCommand("securepatch.clearFindings", () => {
       diagnostics.clear();
       findingsStore.clear();
       output.clear();
-      vscode.window.showInformationMessage("SecurePatch AI findings cleared.");
+      vscode.window.showInformationMessage("[SP] SecurePatch AI findings cleared.");
     }),
     vscode.commands.registerCommand("securepatch.openFinding", async (finding: SecurityFinding) => {
       await openFinding(finding);
@@ -113,7 +113,7 @@ async function scanDocument(
     return [];
   }
 
-  const findings = scanFile(document.uri.fsPath, document.getText());
+  const findings = await scanFile(document.uri.fsPath, document.getText());
   setDiagnosticsForFile(diagnostics, document.uri, findings);
   findingsStore.setForFile(document.uri.fsPath, findings);
   return findings;

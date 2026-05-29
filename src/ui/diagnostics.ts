@@ -27,12 +27,18 @@ function toDiagnostic(finding: SecurityFinding): vscode.Diagnostic {
   );
   const diagnostic = new vscode.Diagnostic(
     range,
-    `${finding.title}: ${finding.description} Recommendation: ${finding.recommendation}`,
+    `[SP] ${finding.title}. ${finding.recommendation}`,
     toDiagnosticSeverity(finding.severity)
   );
 
   diagnostic.code = finding.id;
-  diagnostic.source = "SecurePatch AI";
+  diagnostic.source = "[SP] SecurePatch AI";
+  diagnostic.relatedInformation = [
+    new vscode.DiagnosticRelatedInformation(
+      new vscode.Location(vscode.Uri.file(finding.filePath), range),
+      `[SP] ${finding.description}`
+    )
+  ];
 
   return diagnostic;
 }
