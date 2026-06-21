@@ -11,6 +11,12 @@
     "Linters",
     "Other"
   ],
+  "workspaces": [
+    "core"
+  ],
+  "dependencies": {
+    "@securepatch/core": "*"
+  },
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
@@ -134,7 +140,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "build:core": "npm run build --workspace @securepatch/core",
+    "compile": "npm run build:core && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
     "test": "npm run compile"

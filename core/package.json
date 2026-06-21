@@ -1,0 +1,18 @@
+{
+  "name": "@securepatch/core",
+  "version": "0.0.1",
+  "description": "Pure (no-vscode) detection, fix, and model-provider interfaces shared by the SecurePatch AI extension and the research harness.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "securepatch-core": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "typescript": "^5.4.5"
+  }
+}
