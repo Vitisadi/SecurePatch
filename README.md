@@ -57,3 +57,6 @@ SecurePatch AI can generate an explanation and suggested fix for a selected find
 You can also use the lightbulb Quick Fix menu on a highlighted issue and choose `[SP] Explain and suggest fix with AI`.
 
 If the AI returns a one-line fix, SecurePatch AI inserts a temporary preview line above the original line. The preview line is highlighted green with `[SP +]`, and the original line is highlighted red with `[SP -]`. Use `[SP] Apply` to keep the new line and remove the old one, or `[SP] Reject` to remove the preview line.
+
+todo: check auto edit w multiple ai
+do you need multiple ai scans? different ais
