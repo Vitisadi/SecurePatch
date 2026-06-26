@@ -1,0 +1,23 @@
+{
+  "case_id": "cwe-798-hardcoded-credentials",
+  "language": "python",
+  "category": "hardcoded-secret",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/client.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "A live API key is hard-coded as a module constant and used as a fallback credential.",
+  "provenance": {
+    "cwe": "CWE-798",
+    "cwe_name": "Use of Hard-coded Credentials",
+    "cwe_top25_2024_rank": 22,
+    "owasp_2021": "A07:2021 - Identification and Authentication Failures",
+    "construction": "archetypal",
+    "selection_rationale": "Rank 22 in the 2024 CWE Top 25 and a frequent real-world leak; a single-line, pattern-visible secret that anchors the syntactic end of the obscurity axis and is within the regex detector's coverage.",
+    "sources": [
+      {"title": "2024 CWE Top 25 Most Dangerous Software Weaknesses", "publisher": "MITRE / CISA", "year": 2024, "url": "https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html", "note": "CWE-798 ranked #22"},
+      {"title": "CWE-798: Use of Hard-coded Credentials", "publisher": "MITRE CWE", "url": "https://cwe.mitre.org/data/definitions/798.html"},
+      {"title": "CWEval: Outcome-driven Evaluation on Functionality and Security of LLM Code Generation", "authors": "Peng et al.", "venue": "arXiv:2501.08200", "year": 2025, "url": "https://arxiv.org/abs/2501.08200", "note": "hard-coded credentials among covered CWEs"}
+    ]
+  }
+}

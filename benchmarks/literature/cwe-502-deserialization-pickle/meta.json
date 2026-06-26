@@ -1,0 +1,23 @@
+{
+  "case_id": "cwe-502-deserialization-pickle",
+  "language": "python",
+  "category": "deserialization",
+  "difficulty": "medium",
+  "obscurity": "syntactic",
+  "entrypoint": "source/cache.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "Untrusted bytes are passed to pickle.loads, which can execute arbitrary code during deserialization. A single recognizable dangerous call, now caught by the detector's pickle rule.",
+  "provenance": {
+    "cwe": "CWE-502",
+    "cwe_name": "Deserialization of Untrusted Data",
+    "cwe_top25_2024_rank": 16,
+    "owasp_2021": "A08:2021 - Software and Data Integrity Failures",
+    "construction": "archetypal",
+    "selection_rationale": "Rank 16 in the 2024 CWE Top 25 and the canonical insecure-deserialization flaw; pickle.loads is the standard Python instance, realizable with only the standard library and semantic rather than pattern-visible.",
+    "sources": [
+      {"title": "2024 CWE Top 25 Most Dangerous Software Weaknesses", "publisher": "MITRE / CISA", "year": 2024, "url": "https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html", "note": "CWE-502 ranked #16"},
+      {"title": "CWE-502: Deserialization of Untrusted Data", "publisher": "MITRE CWE", "url": "https://cwe.mitre.org/data/definitions/502.html"},
+      {"title": "SecurityEval Dataset: Mining Vulnerability Examples to Evaluate Machine Learning-Based Code Generation Techniques", "authors": "Siddiq and Santos", "venue": "MSR4P&S '22", "year": 2022, "url": "https://doi.org/10.1145/3549035.3561184", "note": "Insecure deserialization among its CWE-mapped Python weaknesses"}
+    ]
+  }
+}

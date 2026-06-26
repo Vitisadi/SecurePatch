@@ -1,0 +1,16 @@
+{
+  "case_id": "cwe-798-hardcoded-credentials",
+  "bugs": [
+    {
+      "id": "cwe-798-hardcoded-credentials-1",
+      "file": "source/client.py",
+      "line_start": 4,
+      "line_end": 4,
+      "type": "hardcoded-secret",
+      "cwe": "CWE-798",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "A credential-like value is assigned to a module constant in source."
+    }
+  ]
+}

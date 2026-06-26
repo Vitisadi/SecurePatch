@@ -24,6 +24,7 @@ from .matcher import MatchResult, match_findings
 @dataclass
 class CaseReport:
     case_id: str
+    collection: str
     detector: str
     result: MatchResult
     surprises: list[str] = field(default_factory=list)
@@ -70,7 +71,23 @@ def _bench_case(case: BenchmarkCase, window: int) -> CaseReport:
         combined.false_positives.extend(per_file.false_positives)
 
     surprises = _detect_surprises(combined)
-    return CaseReport(case_id=case.case_id, detector=detector, result=combined, surprises=surprises)
+    return CaseReport(
+        case_id=case.case_id,
+        collection=case.collection,
+        detector=detector,
+        result=combined,
+        surprises=surprises,
+    )
+
+
+def collection_tallies(reports: list[CaseReport]) -> dict[str, TierTally]:
+    """Aggregate detected/total per collection (seeded vs literature)."""
+    tallies: dict[str, TierTally] = {}
+    for report in reports:
+        tally = tallies.setdefault(report.collection, TierTally())
+        tally.detected += report.result.detected_count
+        tally.total += report.result.bug_count
+    return tallies
 
 
 def _detect_surprises(result: MatchResult) -> list[str]:

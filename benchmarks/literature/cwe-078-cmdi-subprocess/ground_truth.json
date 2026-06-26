@@ -1,0 +1,16 @@
+{
+  "case_id": "cwe-078-cmdi-subprocess",
+  "bugs": [
+    {
+      "id": "cwe-078-cmdi-subprocess-1",
+      "file": "source/archive.py",
+      "line_start": 11,
+      "line_end": 11,
+      "type": "command-injection",
+      "cwe": "CWE-78",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "subprocess.run is called with shell=True on a command string built from an untrusted path."
+    }
+  ]
+}

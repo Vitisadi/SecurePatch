@@ -1,0 +1,16 @@
+{
+  "case_id": "py-cwe_1333_0",
+  "bugs": [
+    {
+      "id": "py-cwe_1333_0-1",
+      "file": "source/cwe_1333_0_task.py",
+      "line_start": 1,
+      "line_end": 13,
+      "type": "redos",
+      "cwe": "CWE-1333",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": false,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review)."
+    }
+  ]
+}

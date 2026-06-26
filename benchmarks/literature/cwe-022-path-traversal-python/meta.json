@@ -1,0 +1,23 @@
+{
+  "case_id": "cwe-022-path-traversal-python",
+  "language": "python",
+  "category": "path-traversal",
+  "difficulty": "medium",
+  "obscurity": "local-semantic",
+  "entrypoint": "source/files.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "A user-supplied name is joined onto a content directory and opened with no containment check, so '../' escapes the directory. No regex rule covers this; detecting it requires understanding the path data flow.",
+  "provenance": {
+    "cwe": "CWE-22",
+    "cwe_name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+    "cwe_top25_2024_rank": 5,
+    "owasp_2021": "A01:2021 - Broken Access Control",
+    "construction": "archetypal",
+    "selection_rationale": "Rank 5 in the 2024 CWE Top 25 and the canonical filesystem access-control flaw; realizable as a self-contained Python program and a semantic (non-pattern) bug that exercises the obscurity axis.",
+    "sources": [
+      {"title": "2024 CWE Top 25 Most Dangerous Software Weaknesses", "publisher": "MITRE / CISA", "year": 2024, "url": "https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html", "note": "CWE-22 ranked #5"},
+      {"title": "CWE-22: Improper Limitation of a Pathname to a Restricted Directory", "publisher": "MITRE CWE", "url": "https://cwe.mitre.org/data/definitions/22.html"},
+      {"title": "SecurityEval Dataset: Mining Vulnerability Examples to Evaluate Machine Learning-Based Code Generation Techniques", "authors": "Siddiq and Santos", "venue": "MSR4P&S '22", "year": 2022, "url": "https://doi.org/10.1145/3549035.3561184", "note": "Path traversal among its CWE-mapped Python weaknesses"}
+    ]
+  }
+}

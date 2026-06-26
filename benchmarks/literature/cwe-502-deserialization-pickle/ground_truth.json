@@ -1,0 +1,16 @@
+{
+  "case_id": "cwe-502-deserialization-pickle",
+  "bugs": [
+    {
+      "id": "cwe-502-deserialization-pickle-1",
+      "file": "source/cache.py",
+      "line_start": 10,
+      "line_end": 10,
+      "type": "deserialization",
+      "cwe": "CWE-502",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "pickle.loads deserializes untrusted bytes, allowing arbitrary code execution."
+    }
+  ]
+}

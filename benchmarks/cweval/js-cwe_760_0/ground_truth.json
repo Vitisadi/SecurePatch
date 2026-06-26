@@ -1,0 +1,16 @@
+{
+  "case_id": "js-cwe_760_0",
+  "bugs": [
+    {
+      "id": "js-cwe_760_0-1",
+      "file": "source/cwe_760_0_js_unsafe.js",
+      "line_start": 1,
+      "line_end": 49,
+      "type": "weak-cryptography",
+      "cwe": "CWE-760",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": false,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review)."
+    }
+  ]
+}

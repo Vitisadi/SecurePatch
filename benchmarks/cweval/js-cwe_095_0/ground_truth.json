@@ -1,0 +1,16 @@
+{
+  "case_id": "js-cwe_095_0",
+  "bugs": [
+    {
+      "id": "js-cwe_095_0-1",
+      "file": "source/cwe_095_0_js_unsafe.js",
+      "line_start": 11,
+      "line_end": 11,
+      "type": "code-injection",
+      "cwe": "CWE-95",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": true,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range from our detector."
+    }
+  ]
+}

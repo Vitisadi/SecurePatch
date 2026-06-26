@@ -1,0 +1,16 @@
+{
+  "case_id": "cwe-022-path-traversal-python",
+  "bugs": [
+    {
+      "id": "cwe-022-path-traversal-python-1",
+      "file": "source/files.py",
+      "line_start": 9,
+      "line_end": 10,
+      "type": "path-traversal",
+      "cwe": "CWE-22",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": false,
+      "description": "The untrusted name is joined onto CONTENT_DIR and opened without verifying the resolved path stays inside the directory."
+    }
+  ]
+}

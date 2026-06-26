@@ -1,0 +1,29 @@
+{
+  "case_id": "py-cwe_327_2",
+  "language": "python",
+  "category": "weak-cryptography",
+  "difficulty": "unknown",
+  "obscurity": "local-semantic",
+  "entrypoint": "source/cwe_327_2_task.py",
+  "test_command": "pytest oracle/  # needs the CWEval pytest config / container",
+  "description": "CWEval cwe_327_2 (CWE-327). Vulnerable source is CWEval's insecure reference; the secure reference and the functional+security oracle are vendored under oracle/.",
+  "provenance": {
+    "cwe": "CWE-327",
+    "construction": "adapted",
+    "needs_review": true,
+    "selection_rationale": "Imported wholesale from the CWEval benchmark (in-scope Python/JS tasks). Obscurity tier is provisional pending manual review.",
+    "sources": [
+      {
+        "title": "CWEval: Outcome-driven Evaluation on Functionality and Security of LLM Code Generation",
+        "authors": "Peng et al.",
+        "year": 2025,
+        "url": "https://arxiv.org/abs/2501.08200"
+      },
+      {
+        "title": "CWEval benchmark repository (Apache-2.0)",
+        "url": "https://github.com/Co1lin/CWEval",
+        "note": "vendored from commit 8112fb410273"
+      }
+    ]
+  }
+}

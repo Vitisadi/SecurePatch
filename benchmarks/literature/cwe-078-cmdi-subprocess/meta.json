@@ -1,0 +1,23 @@
+{
+  "case_id": "cwe-078-cmdi-subprocess",
+  "language": "python",
+  "category": "command-injection",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/archive.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "A file path is concatenated into a shell command run with subprocess shell=True, allowing command injection.",
+  "provenance": {
+    "cwe": "CWE-78",
+    "cwe_name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+    "cwe_top25_2024_rank": 7,
+    "owasp_2021": "A03:2021 - Injection",
+    "construction": "archetypal",
+    "selection_rationale": "Rank 7 in the 2024 CWE Top 25; the subprocess shell=True form is the most common real-world OS-command-injection pattern in Python and is within the regex detector's coverage.",
+    "sources": [
+      {"title": "2024 CWE Top 25 Most Dangerous Software Weaknesses", "publisher": "MITRE / CISA", "year": 2024, "url": "https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html", "note": "CWE-78 ranked #7"},
+      {"title": "CWE-78: Improper Neutralization of Special Elements used in an OS Command", "publisher": "MITRE CWE", "url": "https://cwe.mitre.org/data/definitions/78.html"},
+      {"title": "SecurityEval Dataset: Mining Vulnerability Examples to Evaluate Machine Learning-Based Code Generation Techniques", "authors": "Siddiq and Santos", "venue": "MSR4P&S '22", "year": 2022, "url": "https://doi.org/10.1145/3549035.3561184", "note": "OS command injection among its CWE-mapped Python weaknesses"}
+    ]
+  }
+}

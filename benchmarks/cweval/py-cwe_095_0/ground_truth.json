@@ -1,0 +1,16 @@
+{
+  "case_id": "py-cwe_095_0",
+  "bugs": [
+    {
+      "id": "py-cwe_095_0-1",
+      "file": "source/cwe_095_0_task.py",
+      "line_start": 3,
+      "line_end": 3,
+      "type": "code-injection",
+      "cwe": "CWE-95",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": true,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range from our detector."
+    }
+  ]
+}

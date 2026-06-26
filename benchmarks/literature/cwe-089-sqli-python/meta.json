@@ -1,0 +1,23 @@
+{
+  "case_id": "cwe-089-sqli-python",
+  "language": "python",
+  "category": "sql-injection",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/users.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "A user id is concatenated into a SQL string. This Python case originally exposed a coverage gap (the detector had a JS/TS SQL rule but none for Python); a Python SQL rule was subsequently added to the base detector to close it.",
+  "provenance": {
+    "cwe": "CWE-89",
+    "cwe_name": "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+    "cwe_top25_2024_rank": 3,
+    "owasp_2021": "A03:2021 - Injection",
+    "construction": "archetypal",
+    "selection_rationale": "Top-3 weakness in the 2024 CWE Top 25 and the canonical server-side injection flaw; instantiated in Python to expose a language asymmetry in the regex detector and to pair with the JS SQL-injection cases.",
+    "sources": [
+      {"title": "2024 CWE Top 25 Most Dangerous Software Weaknesses", "publisher": "MITRE / CISA", "year": 2024, "url": "https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html", "note": "CWE-89 ranked #3"},
+      {"title": "CWE-89: Improper Neutralization of Special Elements used in an SQL Command", "publisher": "MITRE CWE", "url": "https://cwe.mitre.org/data/definitions/89.html"},
+      {"title": "SecurityEval Dataset: Mining Vulnerability Examples to Evaluate Machine Learning-Based Code Generation Techniques", "authors": "Siddiq and Santos", "venue": "MSR4P&S '22", "year": 2022, "url": "https://doi.org/10.1145/3549035.3561184", "note": "Python CWE-89 among its 75 CWE-mapped weaknesses"}
+    ]
+  }
+}

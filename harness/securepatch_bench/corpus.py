@@ -28,14 +28,29 @@ DEFAULT_CORPUS_DIR = REPO_ROOT / "benchmarks"
 # cover (those are the obscure cases). Keep in sync with benchmarks/README.md.
 KNOWN_TYPES = frozenset(
     {
+        # emitted by our detector and/or used by our authored cases
         "sql-injection",
         "command-injection",
         "code-injection",
+        "path-traversal",
+        "deserialization",
+        "ssrf",
         "weak-randomness",
         "xss",
         "weak-cryptography",
         "hardcoded-secret",
         "vulnerable-dependency",
+        # additional classes introduced by the CWEval corpus
+        "improper-input-validation",
+        "http-response-splitting",
+        "log-injection",
+        "redos",
+        "improper-signature-verification",
+        "insecure-temp-file",
+        "resource-exhaustion",
+        "xpath-injection",
+        "incorrect-permissions",
+        "nosql-injection",
     }
 )
 
@@ -71,6 +86,7 @@ class Bug:
 class BenchmarkCase:
     case_id: str
     root: Path
+    collection: str
     language: str
     category: str
     difficulty: str
@@ -79,6 +95,7 @@ class BenchmarkCase:
     test_command: str
     description: str
     bugs: tuple[Bug, ...]
+    provenance: dict
 
     def source_files(self) -> list[Path]:
         """Absolute paths under source/ that the core detector can scan."""
@@ -100,26 +117,43 @@ def _is_scannable(path: Path) -> bool:
     return path.suffix.lower() in SCANNABLE_SUFFIXES or path.name.lower() in SCANNABLE_NAMES
 
 
-def load_corpus(corpus_dir: str | Path | None = None) -> list[BenchmarkCase]:
-    """Load and validate every case under ``corpus_dir`` (default: benchmarks/)."""
-    root = Path(corpus_dir) if corpus_dir is not None else DEFAULT_CORPUS_DIR
+def load_corpus(
+    corpus_dir: str | Path | None = None,
+    collection: str | None = None,
+) -> list[BenchmarkCase]:
+    """Load and validate every case under ``corpus_dir`` (default: benchmarks/).
+
+    Cases may live directly under the root or one level down in a *collection*
+    folder (e.g. ``seeded/``, ``literature/``). Each case is the directory that
+    contains a ``meta.json``. Pass ``collection`` to load only one collection.
+    """
+    root = (Path(corpus_dir) if corpus_dir is not None else DEFAULT_CORPUS_DIR).resolve()
     if not root.is_dir():
         raise CorpusError(f"corpus directory not found: {root}")
 
     cases: list[BenchmarkCase] = []
-    for case_dir in sorted(p for p in root.iterdir() if p.is_dir()):
-        meta_path = case_dir / "meta.json"
-        if not meta_path.exists():
-            # Not a case directory (e.g. shared fixtures); skip silently.
+    for meta_path in sorted(root.rglob("meta.json")):
+        case_dir = meta_path.parent
+        case_collection = _collection_of(root, case_dir)
+        if collection is not None and case_collection != collection:
             continue
-        cases.append(load_case(case_dir))
+        cases.append(load_case(case_dir, collection=case_collection))
 
     if not cases:
-        raise CorpusError(f"no benchmark cases found under {root}")
+        where = f"{root}" + (f" (collection '{collection}')" if collection else "")
+        raise CorpusError(f"no benchmark cases found under {where}")
     return cases
 
 
-def load_case(case_dir: str | Path) -> BenchmarkCase:
+def _collection_of(root: Path, case_dir: Path) -> str:
+    """The collection is the first path segment between the corpus root and the
+    case directory (e.g. 'literature'); cases directly under root are '(root)'."""
+    rel = case_dir.resolve().relative_to(root)
+    parts = rel.parts
+    return parts[0] if len(parts) > 1 else "(root)"
+
+
+def load_case(case_dir: str | Path, collection: str = "(root)") -> BenchmarkCase:
     """Load and validate a single case directory."""
     root = Path(case_dir).resolve()
     meta = _read_json(root / "meta.json")
@@ -148,9 +182,12 @@ def load_case(case_dir: str | Path) -> BenchmarkCase:
     if not bugs:
         raise CorpusError(f"{case_id}: ground_truth.json lists no bugs")
 
+    provenance = _parse_provenance(case_id, collection, meta.get("provenance"))
+
     return BenchmarkCase(
         case_id=case_id,
         root=root,
+        collection=collection,
         language=_require_str(meta, "language", root),
         category=_require_str(meta, "category", root),
         difficulty=str(meta.get("difficulty", "unknown")),
@@ -159,7 +196,35 @@ def load_case(case_dir: str | Path) -> BenchmarkCase:
         test_command=str(meta.get("test_command", "")),
         description=str(meta.get("description", "")),
         bugs=bugs,
+        provenance=provenance,
     )
+
+
+def _parse_provenance(case_id: str, collection: str, raw: object) -> dict:
+    """Validate the optional provenance block.
+
+    Cases in the ``literature`` collection must be traceable to a published
+    source, so we require a non-empty ``sources`` list there; for other
+    collections provenance is optional.
+    """
+    if raw is None:
+        if collection == "literature":
+            raise CorpusError(
+                f"{case_id}: literature cases require a 'provenance' block with sources"
+            )
+        return {}
+    if not isinstance(raw, dict):
+        raise CorpusError(f"{case_id}: provenance must be a JSON object")
+
+    sources = raw.get("sources", [])
+    if not isinstance(sources, list):
+        raise CorpusError(f"{case_id}: provenance.sources must be a list")
+    if collection == "literature" and not sources:
+        raise CorpusError(f"{case_id}: literature cases must cite at least one source")
+    for source in sources:
+        if not isinstance(source, dict) or not source.get("title"):
+            raise CorpusError(f"{case_id}: each provenance source needs a 'title'")
+    return raw
 
 
 def _parse_bug(case_id: str, root: Path, raw: dict) -> Bug:

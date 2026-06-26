@@ -1,0 +1,10 @@
+{
+  "case_id": "py-code-injection-eval",
+  "language": "python",
+  "category": "code-injection",
+  "difficulty": "medium",
+  "obscurity": "syntactic",
+  "entrypoint": "source/calc.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "User input flows into eval(). A single recognizable dangerous call, now caught by the detector's eval/exec rule."
+}

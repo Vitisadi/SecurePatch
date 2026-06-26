@@ -1,0 +1,16 @@
+{
+  "case_id": "cwe-079-xss-innerhtml",
+  "bugs": [
+    {
+      "id": "cwe-079-xss-innerhtml-1",
+      "file": "source/render.js",
+      "line_start": 7,
+      "line_end": 7,
+      "type": "xss",
+      "cwe": "CWE-79",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "Untrusted text reaches element.innerHTML without output encoding."
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "case_id": "cwe-089-sqli-python",
+  "bugs": [
+    {
+      "id": "cwe-089-sqli-python-1",
+      "file": "source/users.py",
+      "line_start": 11,
+      "line_end": 11,
+      "type": "sql-injection",
+      "cwe": "CWE-89",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "user_id is concatenated into a SELECT statement (caught by the Python SQL rule added to the detector)."
+    }
+  ]
+}

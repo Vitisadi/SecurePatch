@@ -1,0 +1,23 @@
+{
+  "case_id": "cwe-079-xss-innerhtml",
+  "language": "javascript",
+  "category": "xss",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/render.js",
+  "test_command": "node --test tests/**/*.js",
+  "description": "Untrusted comment text is concatenated into markup and assigned to innerHTML, allowing script injection.",
+  "provenance": {
+    "cwe": "CWE-79",
+    "cwe_name": "Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+    "cwe_top25_2024_rank": 1,
+    "owasp_2021": "A03:2021 - Injection",
+    "construction": "archetypal",
+    "selection_rationale": "Highest-ranked weakness in the 2024 CWE Top 25 and the canonical client-side injection flaw for JavaScript; within the extension's language scope and covered by prior LLM secure-code benchmarks.",
+    "sources": [
+      {"title": "2024 CWE Top 25 Most Dangerous Software Weaknesses", "publisher": "MITRE / CISA", "year": 2024, "url": "https://cwe.mitre.org/top25/archive/2024/2024_cwe_top25.html", "note": "CWE-79 ranked #1"},
+      {"title": "CWE-79: Improper Neutralization of Input During Web Page Generation", "publisher": "MITRE CWE", "url": "https://cwe.mitre.org/data/definitions/79.html", "note": "canonical entry and demonstrative examples"},
+      {"title": "CWEval: Outcome-driven Evaluation on Functionality and Security of LLM Code Generation", "authors": "Peng et al.", "venue": "arXiv:2501.08200", "year": 2025, "url": "https://arxiv.org/abs/2501.08200", "note": "XSS among covered CWEs; motivates functional+security oracle"}
+    ]
+  }
+}

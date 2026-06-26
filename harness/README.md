@@ -19,8 +19,11 @@ Implemented:
   (1-based) by type + line window; yields true positives / misses / false
   positives.
 - `bench.py` + the `bench` command — the **baseline**: scans every case with the
-  regex detector and scores recall overall and per obscurity tier.
-- `__main__.py` — `scan` (single file) and `bench` (whole corpus) commands.
+  regex detector and scores recall overall, per collection, and per obscurity tier.
+- `cweval_import.py` + the `import-cweval` command — vendors the in-scope
+  (Python/JS) tasks of the [CWEval](https://github.com/Co1lin/CWEval) benchmark
+  into `benchmarks/cweval/` (Apache-2.0, attributed).
+- `__main__.py` — `scan`, `bench`, and `import-cweval` commands.
 
 Not yet (later weeks): provider adapters (OpenAI/Claude/Gemini/Ollama), the
 sandbox + verify loop, and the full experiment runner (cases x models x scans).
@@ -46,11 +49,15 @@ python -m securepatch_bench scan test/test.py --record harness/results/run.jsonl
 # baseline: scan the whole benchmark corpus and score the regex detector
 python -m securepatch_bench bench
 python -m securepatch_bench bench --record harness/results/baseline.jsonl
+
+# (re)import the CWEval tasks from a local CWEval checkout
+python -m securepatch_bench import-cweval /path/to/CWEval
 ```
 
-`bench` reports the regex detector's recall over `../benchmarks/`. With the seed
-corpus it finds every syntactic case (its floor) and zero obscure cases — that
-gap is exactly what the AI providers are meant to close in later weeks.
+`bench` reports the regex detector's recall over `../benchmarks/` (overall, per
+collection, per obscurity tier). It clears every syntactic case but misses the
+semantic / multi-function ones — the gap the AI providers are meant to close.
+Use it as the regression harness when extending the base detector rules.
 
 Run from the `harness/` directory, or add it to `PYTHONPATH`. To override where
 the core CLI lives, set `SECUREPATCH_CORE_CLI`.

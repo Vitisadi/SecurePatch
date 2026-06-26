@@ -1,0 +1,16 @@
+{
+  "case_id": "py-cwe_327_1",
+  "bugs": [
+    {
+      "id": "py-cwe_327_1-1",
+      "file": "source/cwe_327_1_task.py",
+      "line_start": 6,
+      "line_end": 6,
+      "type": "weak-cryptography",
+      "cwe": "CWE-327",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": true,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range from our detector."
+    }
+  ]
+}

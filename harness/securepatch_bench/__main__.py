@@ -17,7 +17,8 @@ import argparse
 import sys
 
 from . import bench as bench_mod
-from .corpus import CorpusError, OBSCURITY_TIERS
+from . import cweval_import
+from .corpus import CorpusError, OBSCURITY_TIERS, DEFAULT_CORPUS_DIR
 from .core_bridge import CoreBridgeError, scan_file
 from .results import ResultWriter
 
@@ -76,6 +77,11 @@ def _cmd_bench(args: argparse.Namespace) -> int:
             print(f"      ! {note}")
 
     print()
+    print("by collection:")
+    for name, tally in sorted(bench_mod.collection_tallies(reports).items()):
+        print(f"  {name:<16} {tally.detected}/{tally.total}  recall={tally.recall:.0%}")
+
+    print()
     print("by obscurity tier:")
     for tier in OBSCURITY_TIERS:
         tally = tallies[tier]
@@ -97,6 +103,7 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                         "phase": "bench",
                         "detector": report.detector,
                         "case_id": report.case_id,
+                        "collection": report.collection,
                         "window": args.window,
                         "detected": res.detected_count,
                         "bug_count": res.bug_count,
@@ -108,6 +115,23 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                 )
         print(f"recorded {len(reports)} rows -> {args.record}")
 
+    return 0
+
+
+def _cmd_import_cweval(args: argparse.Namespace) -> int:
+    dest = args.dest or (DEFAULT_CORPUS_DIR / "cweval")
+    try:
+        summary = cweval_import.import_cweval(args.src, dest)
+    except Exception as exc:  # noqa: BLE001
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"imported {len(summary.imported)} cases -> {dest}")
+    print(f"  detector flags {len(summary.detected)} of them at import time")
+    if summary.skipped:
+        print(f"skipped {len(summary.skipped)}:")
+        for case_id, reason in summary.skipped:
+            print(f"  {case_id}: {reason}")
     return 0
 
 
@@ -146,6 +170,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Append one result row per case to this JSONL file.",
     )
     bench.set_defaults(func=_cmd_bench)
+
+    imp = sub.add_parser(
+        "import-cweval",
+        help="Vendor in-scope CWEval tasks into benchmarks/cweval/.",
+    )
+    imp.add_argument("src", help="Path to a CWEval checkout (repo root).")
+    imp.add_argument(
+        "--dest",
+        metavar="DIR",
+        default=None,
+        help="Output collection dir (default: benchmarks/cweval).",
+    )
+    imp.set_defaults(func=_cmd_import_cweval)
 
     return parser
 

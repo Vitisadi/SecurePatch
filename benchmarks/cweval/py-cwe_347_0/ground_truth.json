@@ -1,0 +1,16 @@
+{
+  "case_id": "py-cwe_347_0",
+  "bugs": [
+    {
+      "id": "py-cwe_347_0-1",
+      "file": "source/cwe_347_0_task.py",
+      "line_start": 1,
+      "line_end": 9,
+      "type": "improper-signature-verification",
+      "cwe": "CWE-347",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": false,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review)."
+    }
+  ]
+}

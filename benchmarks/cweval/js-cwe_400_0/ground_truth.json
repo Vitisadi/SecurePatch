@@ -1,0 +1,16 @@
+{
+  "case_id": "js-cwe_400_0",
+  "bugs": [
+    {
+      "id": "js-cwe_400_0-1",
+      "file": "source/cwe_400_0_js_unsafe.js",
+      "line_start": 1,
+      "line_end": 18,
+      "type": "resource-exhaustion",
+      "cwe": "CWE-400",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": false,
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review)."
+    }
+  ]
+}
