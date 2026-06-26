@@ -1,0 +1,10 @@
+{
+  "case_id": "js-sqli-concat",
+  "language": "javascript",
+  "category": "sql-injection",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/users.js",
+  "test_command": "node --test tests/**/*.js",
+  "description": "A user id is concatenated directly into a SELECT statement on one line."
+}

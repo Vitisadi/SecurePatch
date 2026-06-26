@@ -1,0 +1,16 @@
+{
+  "case_id": "js-sqli-concat",
+  "bugs": [
+    {
+      "id": "js-sqli-concat-1",
+      "file": "source/users.js",
+      "line_start": 16,
+      "line_end": 16,
+      "type": "sql-injection",
+      "cwe": "CWE-89",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "The id argument is concatenated into a SELECT query string."
+    }
+  ]
+}

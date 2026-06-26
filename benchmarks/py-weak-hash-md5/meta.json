@@ -1,0 +1,10 @@
+{
+  "case_id": "py-weak-hash-md5",
+  "language": "python",
+  "category": "weak-cryptography",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/fingerprint.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "MD5 is used to fingerprint content; it is a weak, collision-prone algorithm."
+}

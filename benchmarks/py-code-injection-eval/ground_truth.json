@@ -1,0 +1,16 @@
+{
+  "case_id": "py-code-injection-eval",
+  "bugs": [
+    {
+      "id": "py-code-injection-eval-1",
+      "file": "source/calc.py",
+      "line_start": 6,
+      "line_end": 6,
+      "type": "code-injection",
+      "cwe": "CWE-95",
+      "obscurity": "local-semantic",
+      "detectable_by_regex": false,
+      "description": "eval() executes an arbitrary attacker-controlled expression."
+    }
+  ]
+}

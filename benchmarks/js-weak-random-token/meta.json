@@ -1,0 +1,10 @@
+{
+  "case_id": "js-weak-random-token",
+  "language": "javascript",
+  "category": "weak-randomness",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/token.js",
+  "test_command": "node --test tests/**/*.js",
+  "description": "Session tokens are derived from Math.random, which is not cryptographically secure."
+}

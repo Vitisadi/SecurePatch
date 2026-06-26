@@ -1,0 +1,16 @@
+{
+  "case_id": "js-sqli-crossfn",
+  "bugs": [
+    {
+      "id": "js-sqli-crossfn-1",
+      "file": "source/report.js",
+      "line_start": 11,
+      "line_end": 11,
+      "type": "sql-injection",
+      "cwe": "CWE-89",
+      "obscurity": "cross-function",
+      "detectable_by_regex": false,
+      "description": "region is concatenated into the SELECT template (defined elsewhere) without parameterization."
+    }
+  ]
+}

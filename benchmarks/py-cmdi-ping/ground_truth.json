@@ -1,0 +1,16 @@
+{
+  "case_id": "py-cmdi-ping",
+  "bugs": [
+    {
+      "id": "py-cmdi-ping-1",
+      "file": "source/app.py",
+      "line_start": 13,
+      "line_end": 13,
+      "type": "command-injection",
+      "cwe": "CWE-78",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "os.system runs a shell command built from the unsanitized host argument."
+    }
+  ]
+}

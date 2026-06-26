@@ -1,0 +1,10 @@
+{
+  "case_id": "py-code-injection-eval",
+  "language": "python",
+  "category": "code-injection",
+  "difficulty": "medium",
+  "obscurity": "local-semantic",
+  "entrypoint": "source/calc.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "User input flows into eval(). No regex rule covers eval, so detecting this requires understanding what the call does, not pattern matching."
+}

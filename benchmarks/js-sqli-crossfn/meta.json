@@ -1,0 +1,10 @@
+{
+  "case_id": "js-sqli-crossfn",
+  "language": "javascript",
+  "category": "sql-injection",
+  "difficulty": "hard",
+  "obscurity": "cross-function",
+  "entrypoint": "source/report.js",
+  "test_command": "node --test tests/**/*.js",
+  "description": "The SELECT keyword lives in a module constant while the unsafe concatenation happens in a separate function, so the SQL keyword and the concatenation never appear on the same line. A per-line regex cannot see the injection."
+}

@@ -1,0 +1,16 @@
+{
+  "case_id": "js-weak-random-token",
+  "bugs": [
+    {
+      "id": "js-weak-random-token-1",
+      "file": "source/token.js",
+      "line_start": 3,
+      "line_end": 3,
+      "type": "weak-randomness",
+      "cwe": "CWE-338",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "Math.random seeds a session token in a security-sensitive context."
+    }
+  ]
+}

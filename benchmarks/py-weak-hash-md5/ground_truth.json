@@ -1,0 +1,16 @@
+{
+  "case_id": "py-weak-hash-md5",
+  "bugs": [
+    {
+      "id": "py-weak-hash-md5-1",
+      "file": "source/fingerprint.py",
+      "line_start": 7,
+      "line_end": 7,
+      "type": "weak-cryptography",
+      "cwe": "CWE-327",
+      "obscurity": "syntactic",
+      "detectable_by_regex": true,
+      "description": "hashlib.md5 is used for content fingerprinting."
+    }
+  ]
+}

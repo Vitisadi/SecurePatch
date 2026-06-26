@@ -1,0 +1,10 @@
+{
+  "case_id": "py-cmdi-ping",
+  "language": "python",
+  "category": "command-injection",
+  "difficulty": "easy",
+  "obscurity": "syntactic",
+  "entrypoint": "source/app.py",
+  "test_command": "python -m unittest discover -s tests",
+  "description": "A user-controlled host name is concatenated into a shell string passed to os.system."
+}
