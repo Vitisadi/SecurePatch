@@ -4,18 +4,19 @@ version = "0.0.1"
 description = "Headless research harness for SecurePatch AI: runs repeated scans across multiple AI providers, applies fixes in isolated sandboxes, verifies them, and records results for analysis."
 requires-python = ">=3.9"
 
-# Runtime dependencies are intentionally empty for the Week 1 skeleton: the
-# detection bridge only needs Node (shelled out to @securepatch/core) and the
-# Python standard library. Provider SDKs and analysis tooling arrive in Week 2.
+# The core stays dependency-free: regex detection only needs Node (shelled out
+# to @securepatch/core) and the standard library. AI detection needs the
+# provider SDKs below — install with `pip install -e .[providers]`.
 dependencies = []
 
 [project.optional-dependencies]
-# Installed in Week 2 when the provider adapters land.
+# Provider SDKs for AI detection (the `detect` / `bench --detector ai` paths).
+# Imported lazily, so they are only required when actually running AI scans.
 providers = [
     "openai",
     "anthropic",
-    "google-genai",
-    # ollama is hit over its local HTTP API; no SDK strictly required.
+    "python-dotenv",  # loads API keys from harness/.env at CLI startup
+    # gemini + ollama adapters land next; google-genai / local HTTP.
 ]
 analysis = [
     "pandas",
@@ -30,4 +31,4 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["securepatch_bench"]
+packages = ["securepatch_bench", "securepatch_bench.providers"]

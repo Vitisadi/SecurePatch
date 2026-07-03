@@ -1,25 +1,33 @@
 """Command-line entry point for the SecurePatch research harness.
 
-    python -m securepatch_bench scan <file>      # detect one file via the core CLI
+    python -m securepatch_bench scan <file>      # regex detection on one file
     python -m securepatch_bench scan <file> --record results/run.jsonl
 
-    python -m securepatch_bench bench            # baseline: scan the whole corpus
+    python -m securepatch_bench detect <file> --provider anthropic   # AI on one file
+
+    python -m securepatch_bench bench            # regex baseline over the corpus
+    python -m securepatch_bench bench --detector ai --provider openai --scans 5
     python -m securepatch_bench bench --record results/baseline.jsonl
 
-`bench` scores the current regex detector against the labeled benchmark corpus
-(detection recall, overall and per obscurity tier). Later weeks add `run` (the
-full experiment grid: cases x models x scans).
+`bench` scores a detector against the labeled benchmark corpus (detection recall,
+overall and per obscurity tier). The regex detector is the floor; AI detectors
+are scored the same way and over repeated scans (detection@k).
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import time
+from pathlib import Path
 
 from . import bench as bench_mod
 from . import cweval_import
 from .corpus import CorpusError, OBSCURITY_TIERS, DEFAULT_CORPUS_DIR
 from .core_bridge import CoreBridgeError, scan_file
+from .detectors import AIDetector, Detector, RegexDetector
+from .providers import ProviderError, get_provider
 from .results import ResultWriter
 
 
@@ -54,27 +62,95 @@ def _cmd_scan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_detect(args: argparse.Namespace) -> int:
+    try:
+        provider = get_provider(args.provider)
+    except ProviderError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    detector = AIDetector(provider, model=args.model)
+    scan = detector.scan(args.file)
+    if scan.error:
+        print(f"error: {scan.error}", file=sys.stderr)
+        return 1
+
+    print(f"{args.file}")
+    print(f"detector={scan.detector} findings={len(scan.findings)}")
+    for finding in scan.findings:
+        print(
+            f"  [{finding['severity']}] {finding['type']} "
+            f"line {finding['line'] + 1}: {finding['title']}"
+        )
+    if scan.usage:
+        print(f"  usage: {_usage_line(scan.usage)}")
+
+    if args.record:
+        with ResultWriter(args.record) as writer:
+            writer.write(
+                {
+                    "phase": "detect",
+                    "detector": scan.detector,
+                    "provider": args.provider,
+                    "model": detector.model,
+                    "file": args.file,
+                    "finding_count": len(scan.findings),
+                    "findings": scan.findings,
+                    "usage": scan.usage.as_dict() if scan.usage else None,
+                }
+            )
+        print(f"recorded 1 row -> {args.record}")
+
+    return 0
+
+
+def _build_detector(args: argparse.Namespace) -> Detector:
+    if args.detector == "ai":
+        if not args.provider:
+            raise ProviderError("--provider is required when --detector ai")
+        provider = get_provider(args.provider)
+        return AIDetector(provider, model=args.model)
+    return RegexDetector()
+
+
 def _cmd_bench(args: argparse.Namespace) -> int:
     try:
-        reports = bench_mod.run_bench(args.benchmarks, window=args.window)
+        detector = _build_detector(args)
+    except ProviderError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    try:
+        wall_start = time.perf_counter()
+        reports = bench_mod.run_bench(
+            args.benchmarks, window=args.window, detector=detector, scans=args.scans
+        )
+        wall_seconds = time.perf_counter() - wall_start
     except (CorpusError, CoreBridgeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
     detected, bug_total, false_positives = bench_mod.totals(reports)
     tallies = bench_mod.tier_tallies(reports)
+    detector_name = reports[0].detector if reports else detector.name
 
-    print(f"detector=regex  cases={len(reports)}  window={args.window}")
+    print(
+        f"detector={detector_name}  cases={len(reports)}  "
+        f"scans={args.scans}  window={args.window}"
+    )
     print()
     print("per case:")
     for report in reports:
         res = report.result
+        label = "detected@k" if args.scans > 1 else "detected"
         print(
-            f"  {report.case_id:<26} detected {res.detected_count}/{res.bug_count}"
-            f"  fp={len(res.false_positives)}"
+            f"  {report.case_id:<26} {label} {res.detected_count}/{res.bug_count}"
+            f"  fp={len(res.false_positives)}{_case_cost_line(report.usage)}"
         )
         for note in report.surprises:
             print(f"      ! {note}")
+        for err in report.errors:
+            print(f"      x {err}")
 
     print()
     print("by collection:")
@@ -91,10 +167,20 @@ def _cmd_bench(args: argparse.Namespace) -> int:
 
     recall = detected / bug_total if bug_total else 0.0
     print()
-    print(f"overall: detected {detected}/{bug_total} (recall {recall:.0%}), "
-          f"false positives {false_positives}")
+    print(
+        f"overall: detected {detected}/{bug_total} (recall {recall:.0%}), "
+        f"false positives {false_positives}"
+    )
+    usage = bench_mod.total_usage(reports)
+    if usage:
+        print(f"model usage: {_usage_line(usage)}")
+        if usage.cost_usd is not None and len(reports):
+            print(f"avg per case: ${usage.cost_usd / len(reports):.4f}")
+    print(f"wall time: {wall_seconds:.1f}s total ({wall_seconds / max(len(reports), 1):.1f}s/case)")
 
     if args.record:
+        provider = args.provider if args.detector == "ai" else None
+        model = detector.model if isinstance(detector, AIDetector) else None
         with ResultWriter(args.record) as writer:
             for report in reports:
                 res = report.result
@@ -102,20 +188,56 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                     {
                         "phase": "bench",
                         "detector": report.detector,
+                        "provider": provider,
+                        "model": model,
                         "case_id": report.case_id,
                         "collection": report.collection,
                         "window": args.window,
+                        "scans": args.scans,
                         "detected": res.detected_count,
                         "bug_count": res.bug_count,
                         "false_positives": len(res.false_positives),
                         "missed": [bug.id for bug in res.missed],
                         "matched": [m.bug.id for m in res.matched],
+                        "per_scan_matched": [
+                            [m.bug.id for m in s.matched] for s in report.per_scan
+                        ],
+                        "per_scan_false_positives": [
+                            len(s.false_positives) for s in report.per_scan
+                        ],
+                        "usage": report.usage.as_dict() if report.usage else None,
                         "surprises": report.surprises,
+                        "errors": report.errors,
                     }
                 )
         print(f"recorded {len(reports)} rows -> {args.record}")
 
     return 0
+
+
+def _case_cost_line(usage) -> str:
+    """Compact per-case cost/latency suffix for the per-case bench line.
+
+    Empty for detectors with no model usage (e.g. regex)."""
+    if not usage:
+        return ""
+    parts = []
+    if usage.cost_usd is not None:
+        parts.append(f"${usage.cost_usd:.4f}")
+    if usage.latency_ms is not None:
+        parts.append(f"{usage.latency_ms / 1000:.1f}s")
+    return ("  " + "  ".join(parts)) if parts else ""
+
+
+def _usage_line(usage) -> str:
+    parts = []
+    if usage.input_tokens is not None or usage.output_tokens is not None:
+        parts.append(f"tokens in/out={usage.input_tokens}/{usage.output_tokens}")
+    if usage.cost_usd is not None:
+        parts.append(f"cost=${usage.cost_usd:.4f}")
+    if usage.latency_ms is not None:
+        parts.append(f"latency={usage.latency_ms:.0f}ms")
+    return "  ".join(parts) if parts else "(no usage reported)"
 
 
 def _cmd_import_cweval(args: argparse.Namespace) -> int:
@@ -148,15 +270,59 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan.set_defaults(func=_cmd_scan)
 
+    detect = sub.add_parser(
+        "detect",
+        help="Scan one file with an AI provider (smoke test for provider setup).",
+    )
+    detect.add_argument("file", help="Path to the file to scan.")
+    detect.add_argument(
+        "--provider",
+        required=True,
+        help="Model provider id (openai | anthropic).",
+    )
+    detect.add_argument(
+        "--model",
+        default=None,
+        help="Model id (default: the provider's default model).",
+    )
+    detect.add_argument(
+        "--record",
+        metavar="JSONL",
+        help="Append the scan result as a row to this JSONL file.",
+    )
+    detect.set_defaults(func=_cmd_detect)
+
     bench = sub.add_parser(
         "bench",
-        help="Scan the benchmark corpus with the regex detector and score recall.",
+        help="Scan the benchmark corpus with a detector and score recall.",
     )
     bench.add_argument(
         "--benchmarks",
         metavar="DIR",
         default=None,
         help="Corpus directory (default: repo benchmarks/).",
+    )
+    bench.add_argument(
+        "--detector",
+        choices=["regex", "ai"],
+        default="regex",
+        help="Detector to score (default: regex).",
+    )
+    bench.add_argument(
+        "--provider",
+        default=None,
+        help="Model provider id when --detector ai (openai | anthropic).",
+    )
+    bench.add_argument(
+        "--model",
+        default=None,
+        help="Model id when --detector ai (default: the provider's default).",
+    )
+    bench.add_argument(
+        "--scans",
+        type=int,
+        default=1,
+        help="Repeated scans per case; >1 reports detection@k (default: 1).",
     )
     bench.add_argument(
         "--window",
@@ -187,7 +353,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _load_env() -> None:
+    """Load API keys from ``harness/.env`` if python-dotenv is installed.
+
+    Optional so the regex path keeps working without the provider extras.
+    Real environment variables always win over the file (``override=False``).
+    """
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    # harness/.env — two levels up from this file (securepatch_bench/__main__.py).
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    load_dotenv(env_path, override=False)
+    # Fall back to a .env discovered from the current working directory too.
+    if not os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get("OPENAI_API_KEY"):
+        load_dotenv(override=False)
+
+
 def main(argv: list[str] | None = None) -> int:
+    _load_env()
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)
