@@ -24,9 +24,11 @@ from pathlib import Path
 
 from . import bench as bench_mod
 from . import cweval_import
+from . import fixloop as fixloop_mod
 from .corpus import CorpusError, OBSCURITY_TIERS, DEFAULT_CORPUS_DIR
 from .core_bridge import CoreBridgeError, scan_file
 from .detectors import AIDetector, Detector, RegexDetector
+from .fixer import AIFixer
 from .providers import ProviderError, get_provider
 from .results import ResultWriter
 
@@ -229,6 +231,104 @@ def _case_cost_line(usage) -> str:
     return ("  " + "  ".join(parts)) if parts else ""
 
 
+def _cmd_fix(args: argparse.Namespace) -> int:
+    try:
+        provider = get_provider(args.provider)
+    except ProviderError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    fixer = AIFixer(provider, model=args.model)
+    detector = AIDetector(provider, model=args.model)
+
+    try:
+        wall_start = time.perf_counter()
+        report = fixloop_mod.run_fixloop(
+            fixer,
+            detector,
+            corpus_dir=args.benchmarks,
+            collection=args.collection,
+            case_id=args.case,
+            window=args.window,
+        )
+        wall_seconds = time.perf_counter() - wall_start
+    except (CorpusError, CoreBridgeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    tally = fixloop_mod.verdict_tally(report)
+    print(f"fixer={fixer.name}  attempts={len(report.attempts)}  window={args.window}")
+    print()
+    print("per attempt:")
+    for att in report.attempts:
+        v = att.verify
+        checks = ""
+        if v is not None:
+            bits = []
+            if v.compiles is not None:
+                bits.append("compile" + ("ok" if v.compiles else "FAIL"))
+            if v.tests_ran:
+                bits.append("tests" + ("ok" if v.tests_passed else "FAIL"))
+            else:
+                bits.append("tests-skip")
+            bits.append("vuln" + ("still" if v.vuln_still_present else "gone"))
+            if v.new_findings:
+                bits.append(f"new={len(v.new_findings)}")
+            checks = "  [" + " ".join(bits) + "]"
+        print(
+            f"  {att.case_id:<26} {att.verdict:<9} {att.bug_type}"
+            f"{checks}{_case_cost_line(att.usage)}"
+        )
+        if att.reason:
+            print(f"      - {att.reason}")
+
+    print()
+    print("verdicts:")
+    for verdict in fixloop_mod.VERDICTS:
+        print(f"  {verdict:<10} {tally.get(verdict, 0)}")
+
+    usage = fixloop_mod.total_usage(report)
+    print()
+    if usage:
+        print(f"model usage: {_usage_line(usage)}")
+        if usage.cost_usd is not None and report.attempts:
+            print(f"avg per attempt: ${usage.cost_usd / len(report.attempts):.4f}")
+    per = wall_seconds / max(len(report.attempts), 1)
+    print(f"wall time: {wall_seconds:.1f}s total ({per:.1f}s/attempt)")
+
+    if args.record:
+        with ResultWriter(args.record) as writer:
+            for att in report.attempts:
+                v = att.verify
+                writer.write(
+                    {
+                        "phase": "fix",
+                        "provider": args.provider,
+                        "model": fixer.model,
+                        "case_id": att.case_id,
+                        "collection": att.collection,
+                        "bug_id": att.bug_id,
+                        "bug_type": att.bug_type,
+                        "obscurity": att.obscurity,
+                        "verdict": att.verdict,
+                        "reason": att.reason,
+                        "diff": att.fix.diff,
+                        "fix_error": att.fix.error,
+                        "compiles": v.compiles if v else None,
+                        "tests_ran": v.tests_ran if v else False,
+                        "tests_passed": v.tests_passed if v else None,
+                        "vuln_still_present": v.vuln_still_present if v else None,
+                        "vuln_check": v.vuln_check if v else None,
+                        "new_findings": len(v.new_findings) if v else 0,
+                        "verify_detail": v.detail if v else {},
+                        "usage": att.usage.as_dict() if att.usage else None,
+                    }
+                )
+        print(f"recorded {len(report.attempts)} rows -> {args.record}")
+
+    return 0
+
+
 def _usage_line(usage) -> str:
     parts = []
     if usage.input_tokens is not None or usage.output_tokens is not None:
@@ -336,6 +436,50 @@ def build_parser() -> argparse.ArgumentParser:
         help="Append one result row per case to this JSONL file.",
     )
     bench.set_defaults(func=_cmd_bench)
+
+    fix = sub.add_parser(
+        "fix",
+        help="Detect -> sandbox -> fix -> verify each bug and score the verdict.",
+    )
+    fix.add_argument(
+        "--provider",
+        required=True,
+        help="Model provider id used for both fixing and re-scan (openai | anthropic).",
+    )
+    fix.add_argument(
+        "--model",
+        default=None,
+        help="Model id (default: the provider's default).",
+    )
+    fix.add_argument(
+        "--benchmarks",
+        metavar="DIR",
+        default=None,
+        help="Corpus directory (default: repo benchmarks/).",
+    )
+    fix.add_argument(
+        "--collection",
+        default=None,
+        help="Only fix one collection (e.g. seeded | literature | cweval). "
+        "seeded/literature have runnable tests; cweval verifies by re-scan only.",
+    )
+    fix.add_argument(
+        "--case",
+        default=None,
+        help="Only fix a single case by id (e.g. py-cmdi-ping).",
+    )
+    fix.add_argument(
+        "--window",
+        type=int,
+        default=2,
+        help="Line tolerance when matching a finding to a bug (default: 2).",
+    )
+    fix.add_argument(
+        "--record",
+        metavar="JSONL",
+        help="Append one row per fix attempt (with diff + verdict) to this JSONL file.",
+    )
+    fix.set_defaults(func=_cmd_fix)
 
     imp = sub.add_parser(
         "import-cweval",

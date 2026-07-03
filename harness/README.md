@@ -30,10 +30,43 @@ Implemented:
 - `cweval_import.py` + the `import-cweval` command — vendors the in-scope
   (Python/JS) tasks of the [CWEval](https://github.com/Co1lin/CWEval) benchmark
   into `benchmarks/cweval/` (Apache-2.0, attributed).
-- `__main__.py` — `scan`, `detect`, `bench`, and `import-cweval` commands.
+- `sandbox.py` — copies a case into a throwaway temp dir (never mutating the
+  corpus) and re-validates the copy as a real `BenchmarkCase`.
+- `fixer.py` — the `AIFixer`: prompts a provider for a whole-file rewrite that
+  removes one vulnerability, applies it in the sandbox, and keeps a unified diff.
+- `verify.py` — automatic verification of a patched sandbox: compile/parse check
+  → run the case's `tests/` → re-scan for the original vuln → re-scan for new
+  findings.
+- `fixloop.py` + the `fix` command — the detect → sandbox → fix → verify loop,
+  collapsing the verify signals into one verdict per attempt
+  (`fixed` / `regressed` / `no-op` / `error`). `regressed` is the automatable
+  "did the fix cause a problem?" signal.
+- `__main__.py` — `scan`, `detect`, `bench`, `fix`, and `import-cweval` commands.
 
-Not yet (later weeks): Gemini + Ollama adapters, the sandbox + verify loop, and
-the full experiment runner (cases x models x scans with fixes).
+Not yet (later weeks): Gemini + Ollama adapters, parallel concurrency-limited
+queue, retry-on-regression (agentic) loop, and the analysis notebooks.
+
+- `cweval_oracle.py` — runs CWEval's pytest oracles in a Docker container
+  (`docker/Dockerfile`). Its `functionality` marker is the "still works" signal
+  and its `security` marker is a stronger, exploit-based "vuln gone" signal.
+
+**Verification coverage:**
+- `seeded` + `literature` cases ship runnable `tests/` → full native verification
+  (compile + unit tests + re-scan for vuln-gone / new-findings).
+- `cweval` cases ship a `oracle/` → verified in Docker: `functionality` = tests,
+  `security` = a real exploit-based vuln-gone check (stronger than re-scan);
+  new-findings still come from a re-scan.
+- If Docker is unavailable, `cweval` cases **degrade gracefully** to re-scan-only
+  and the attempt records why, rather than failing.
+
+**Building the CWEval verification image (once):**
+```bash
+# from harness/ — needs Docker Desktop running
+docker build -t securepatch-cweval docker/
+```
+The image bundles Python + Node + the CWEval dependency stack (pycryptodome,
+lxml, PyJWT, argon2, sqlite3, jsdom, ...). The harness mounts one sandboxed case
+at `/work` and runs `pytest oracle -m <marker> -k "not unsafe"`.
 
 ## Prerequisites
 
@@ -73,9 +106,22 @@ python -m securepatch_bench bench --detector ai --provider anthropic --scans 5 \
 python -m securepatch_bench bench --detector ai --provider openai \
     --model gpt-4.1-mini --scans 5 --record harness/results/openai.jsonl
 
+# --- fix + verify loop (needs SDK + key) ---
+# fix one case end-to-end: detect -> sandbox -> fix -> verify -> verdict
+python -m securepatch_bench fix --provider anthropic --case py-cmdi-ping
+
+# fix a whole collection (seeded/literature run tests; cweval is re-scan only)
+python -m securepatch_bench fix --provider anthropic --collection seeded \
+    --record results/fix_claude_seeded.jsonl
+
 # (re)import the CWEval tasks from a local CWEval checkout
 python -m securepatch_bench import-cweval /path/to/CWEval
 ```
+
+The `fix` command records one row per attempt with the applied **unified diff**,
+the verify breakdown (compiles / tests_passed / vuln_still_present / new_findings),
+the verdict, and per-attempt cost + latency — the reviewable "see how it fixed it
+and whether it caused a problem" provenance.
 
 Default models: OpenAI → `gpt-4.1-mini`, Anthropic → `claude-opus-4-8`. Override
 with `--model`. Each AI run prints token usage and an estimated USD cost; the

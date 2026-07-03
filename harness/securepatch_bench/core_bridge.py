@@ -52,11 +52,9 @@ def scan_file(file_path: str | os.PathLike[str]) -> ScanResult:
     cli_path = _resolve_cli()
     target = Path(file_path).resolve()
 
-    proc = subprocess.run(
-        ["node", str(cli_path), "scan", str(target)],
-        capture_output=True,
-        text=True,
-    )
+    from ._proc import run_captured
+
+    proc = run_captured(["node", str(cli_path), "scan", str(target)])
 
     if proc.returncode != 0:
         raise CoreBridgeError(
