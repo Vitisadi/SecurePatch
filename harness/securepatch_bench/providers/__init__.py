@@ -16,11 +16,15 @@ from .base import (
     ProviderError,
     estimate_cost,
 )
+from .gemini_provider import GeminiProvider
+from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
 
 PROVIDERS: dict[str, type[ModelProvider]] = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
+    "gemini": GeminiProvider,
+    "ollama": OllamaProvider,
 }
 
 

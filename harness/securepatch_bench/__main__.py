@@ -378,7 +378,7 @@ def build_parser() -> argparse.ArgumentParser:
     detect.add_argument(
         "--provider",
         required=True,
-        help="Model provider id (openai | anthropic).",
+        help="Model provider id (openai | anthropic | gemini | ollama).",
     )
     detect.add_argument(
         "--model",
@@ -411,7 +411,7 @@ def build_parser() -> argparse.ArgumentParser:
     bench.add_argument(
         "--provider",
         default=None,
-        help="Model provider id when --detector ai (openai | anthropic).",
+        help="Model provider id when --detector ai (openai | anthropic | gemini | ollama).",
     )
     bench.add_argument(
         "--model",
@@ -444,7 +444,7 @@ def build_parser() -> argparse.ArgumentParser:
     fix.add_argument(
         "--provider",
         required=True,
-        help="Model provider id used for both fixing and re-scan (openai | anthropic).",
+        help="Model provider id used for both fixing and re-scan (openai | anthropic | gemini | ollama).",
     )
     fix.add_argument(
         "--model",

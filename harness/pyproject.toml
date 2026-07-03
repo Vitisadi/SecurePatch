@@ -15,8 +15,9 @@ dependencies = []
 providers = [
     "openai",
     "anthropic",
+    "google-genai",   # Gemini adapter
+    "ollama",         # local models adapter
     "python-dotenv",  # loads API keys from harness/.env at CLI startup
-    # gemini + ollama adapters land next; google-genai / local HTTP.
 ]
 analysis = [
     "pandas",
