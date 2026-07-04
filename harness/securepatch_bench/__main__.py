@@ -24,7 +24,10 @@ from pathlib import Path
 
 from . import bench as bench_mod
 from . import cweval_import
+from . import discovery as discovery_mod
+from . import ensemble as ensemble_mod
 from . import fixloop as fixloop_mod
+from . import verifier as verifier_mod
 from .corpus import CorpusError, OBSCURITY_TIERS, DEFAULT_CORPUS_DIR
 from .core_bridge import CoreBridgeError, scan_file
 from .detectors import AIDetector, Detector, RegexDetector
@@ -111,7 +114,9 @@ def _build_detector(args: argparse.Namespace) -> Detector:
         if not args.provider:
             raise ProviderError("--provider is required when --detector ai")
         provider = get_provider(args.provider)
-        return AIDetector(provider, model=args.model)
+        return AIDetector(
+            provider, model=args.model, temperature=getattr(args, "temperature", None)
+        )
     return RegexDetector()
 
 
@@ -192,6 +197,7 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                         "detector": report.detector,
                         "provider": provider,
                         "model": model,
+                        "temperature": args.temperature if args.detector == "ai" else None,
                         "case_id": report.case_id,
                         "collection": report.collection,
                         "window": args.window,
@@ -340,6 +346,114 @@ def _usage_line(usage) -> str:
     return "  ".join(parts) if parts else "(no usage reported)"
 
 
+def _cmd_discovery(args: argparse.Namespace) -> int:
+    try:
+        bug_tiers = discovery_mod.bug_tier_map(args.benchmarks)
+    except (CorpusError, CoreBridgeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    curves = []
+    for path in args.files:
+        try:
+            curves.append(discovery_mod.curve_for_file(path, bug_tiers))
+        except (OSError, ValueError) as exc:
+            print(f"error reading {path}: {exc}", file=sys.stderr)
+            return 1
+
+    md = discovery_mod.render_markdown(curves)
+    print(md)
+    if args.out:
+        Path(args.out).write_text(md + "\n", encoding="utf-8")
+        print(f"\nwrote {args.out}", file=sys.stderr)
+    return 0
+
+
+def _cmd_verify_findings(args: argparse.Namespace) -> int:
+    try:
+        det_provider = get_provider(args.provider)
+        ver_provider = (
+            get_provider(args.verify_provider)
+            if args.verify_provider
+            else det_provider
+        )
+    except ProviderError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    detector = AIDetector(det_provider, model=args.model)
+    verifier = verifier_mod.AIVerifier(
+        ver_provider,
+        model=args.verify_model or (args.model if not args.verify_provider else None),
+        temperature=args.temperature,
+    )
+
+    try:
+        wall_start = time.perf_counter()
+        stats = verifier_mod.run_verification(
+            detector, verifier,
+            corpus_dir=args.benchmarks, collection=args.collection, window=args.window,
+        )
+        wall_seconds = time.perf_counter() - wall_start
+    except (CorpusError, CoreBridgeError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"detector={detector.name}  verifier={verifier.name}  temp={args.temperature}")
+    print()
+    print(f"findings judged: {stats.tp_before + stats.fp_before} "
+          f"(TP={stats.tp_before}, FP={stats.fp_before})")
+    print()
+    print("                 before -> after")
+    print(f"  precision:     {stats.precision_before:.0%}  -> {stats.precision_after:.0%}")
+    print(f"  recall:        {stats.recall_before:.0%}  -> {stats.recall_after:.0%}")
+    print(f"  false pos:     {stats.fp_before:>3}  -> {stats.fp_after:>3}"
+          f"   ({stats.fp_removed} removed)")
+    print(f"  true pos:      {stats.tp_before:>3}  -> {stats.tp_after:>3}"
+          f"   ({len(stats.tp_dropped)} real bugs wrongly rejected)")
+    if stats.tp_dropped:
+        print(f"      dropped: {', '.join(stats.tp_dropped)}")
+    if stats.usage:
+        print(f"\nverifier+detector usage: {_usage_line(stats.usage)}")
+    print(f"wall time: {wall_seconds:.1f}s")
+
+    if args.record:
+        with ResultWriter(args.record) as writer:
+            writer.write({
+                "phase": "verify-findings",
+                "provider": args.provider, "model": detector.model,
+                "verify_provider": args.verify_provider or args.provider,
+                "verify_model": verifier.model, "temperature": args.temperature,
+                "total_bugs": stats.total_bugs,
+                "tp_before": stats.tp_before, "fp_before": stats.fp_before,
+                "tp_after": stats.tp_after, "fp_after": stats.fp_after,
+                "fp_removed": stats.fp_removed, "tp_dropped": stats.tp_dropped,
+                "precision_before": stats.precision_before,
+                "precision_after": stats.precision_after,
+                "recall_before": stats.recall_before,
+                "recall_after": stats.recall_after,
+                "usage": stats.usage.as_dict() if stats.usage else None,
+            })
+        print(f"recorded 1 row -> {args.record}")
+    return 0
+
+
+def _cmd_ensemble(args: argparse.Namespace) -> int:
+    runs = []
+    for path in args.files:
+        try:
+            runs.append(ensemble_mod.load_detector(path))
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"error reading {path}: {exc}", file=sys.stderr)
+            return 1
+    md = ensemble_mod.render_markdown(runs)
+    print(md)
+    if args.out:
+        Path(args.out).write_text(md + "\n", encoding="utf-8")
+        print(f"\nwrote {args.out}", file=sys.stderr)
+    return 0
+
+
 def _cmd_import_cweval(args: argparse.Namespace) -> int:
     dest = args.dest or (DEFAULT_CORPUS_DIR / "cweval")
     try:
@@ -425,6 +539,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Repeated scans per case; >1 reports detection@k (default: 1).",
     )
     bench.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="Sampling temperature for AI detectors (default: provider default; "
+        "Anthropic ignores this — it rejects the parameter).",
+    )
+    bench.add_argument(
         "--window",
         type=int,
         default=2,
@@ -480,6 +601,70 @@ def build_parser() -> argparse.ArgumentParser:
         help="Append one row per fix attempt (with diff + verdict) to this JSONL file.",
     )
     fix.set_defaults(func=_cmd_fix)
+
+    disc = sub.add_parser(
+        "discovery",
+        help="Compute detection@k discovery curves from recorded detection JSONL.",
+    )
+    disc.add_argument(
+        "files",
+        nargs="+",
+        help="Detection result JSONL files (one per model).",
+    )
+    disc.add_argument(
+        "--benchmarks",
+        metavar="DIR",
+        default=None,
+        help="Corpus directory for bug->tier mapping (default: repo benchmarks/).",
+    )
+    disc.add_argument(
+        "--out",
+        metavar="MD",
+        help="Also write the rendered markdown to this file.",
+    )
+    disc.set_defaults(func=_cmd_discovery)
+
+    vf = sub.add_parser(
+        "verify-findings",
+        help="Detect, then judge each finding to remove false positives; score "
+        "precision/recall before vs after against ground truth.",
+    )
+    vf.add_argument("--provider", required=True, help="Detector provider id.")
+    vf.add_argument("--model", default=None, help="Detector model (default: provider default).")
+    vf.add_argument(
+        "--verify-provider",
+        default=None,
+        help="Verifier provider id (default: same as --provider = self-verification). "
+        "Use the same or a STRONGER model — never a weaker one (see ensemble analysis).",
+    )
+    vf.add_argument("--verify-model", default=None, help="Verifier model (default: same as --model).")
+    vf.add_argument(
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="Verifier sampling temperature (default: 0.0 — crisp per-shot judgment).",
+    )
+    vf.add_argument("--benchmarks", metavar="DIR", default=None, help="Corpus directory.")
+    vf.add_argument("--collection", default=None, help="Only one collection (e.g. cweval).")
+    vf.add_argument("--window", type=int, default=2, help="Finding->bug match tolerance.")
+    vf.add_argument("--record", metavar="JSONL", help="Append a summary row to this JSONL file.")
+    vf.set_defaults(func=_cmd_verify_findings)
+
+    ens = sub.add_parser(
+        "ensemble",
+        help="Ensemble analysis (regex∪AI, union, voting) from detection JSONL.",
+    )
+    ens.add_argument(
+        "files",
+        nargs="+",
+        help="Detection result JSONL files (one per detector; include regex).",
+    )
+    ens.add_argument(
+        "--out",
+        metavar="MD",
+        help="Also write the rendered markdown to this file.",
+    )
+    ens.set_defaults(func=_cmd_ensemble)
 
     imp = sub.add_parser(
         "import-cweval",

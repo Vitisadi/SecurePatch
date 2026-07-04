@@ -79,10 +79,12 @@ class AIDetector:
         provider: ModelProvider,
         model: Optional[str] = None,
         max_output_tokens: int = 4096,
+        temperature: Optional[float] = None,
     ) -> None:
         self.provider = provider
         self.model = model or provider.default_model
         self.max_output_tokens = max_output_tokens
+        self.temperature = temperature
         self.name = f"ai:{provider.id}:{self.model}"
 
     def scan(self, source_file: Path) -> DetectorScan:
@@ -96,6 +98,7 @@ class AIDetector:
             prompt=prompt,
             system=DETECTION_SYSTEM,
             max_output_tokens=self.max_output_tokens,
+            temperature=self.temperature,
         )
         try:
             response = self.provider.complete(request)

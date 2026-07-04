@@ -67,6 +67,157 @@ ground-truth bug. AI detectors run `--scans 3` → **detection@3** (found in any
 5. **False positives rise with recall** (3 → 8 → 8 → 10 → 13), and blow up for the
    local model (30). Per-category FP breakdown is a Week 4 task.
 
+## Detection@k — how many scans to find a bug?
+
+Recall as a function of the number of repeated scans (k), from `per_scan_matched`
+in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
+
+**Overall**
+
+| Model | @1 | @2 | @3 |
+|---|---:|---:|---:|
+| qwen2.5-coder:7b | 57% | 62% | 62% |
+| gpt-4.1-mini     | 73% | 77% | 79% |
+| gemini-2.5-flash | 80% | 84% | 86% |
+| opus-4-8         | 93% | 93% | 93% |
+| sonnet-4-6       | 93% | 95% | 95% |
+
+**Local-semantic tier** (the obscure bugs the question is really about)
+
+| Model | @1 | @2 | @3 |
+|---|---:|---:|---:|
+| qwen2.5-coder:7b | 53% | 58% | 58% |
+| gpt-4.1-mini     | 73% | 76% | 78% |
+| gemini-2.5-flash | 84% | 87% | 87% |
+| opus-4-8         | 91% | 91% | 91% |
+| sonnet-4-6       | 93% | 93% | 93% |
+
+**Findings:**
+1. **Repeated scans give small, quickly-diminishing gains** — +2 to +6 points
+   overall, and **almost all of it is realized by k=2**. The third scan adds ≈0.
+2. **The gain is a "recover stochastic misses" effect, not a "grind out obscure
+   bugs" effect.** The frontier models (Opus, Sonnet) are essentially **flat** —
+   they find a bug on scan 1 or not at all. Only the weaker/cheaper models
+   (OpenAI, Gemini, Ollama) claw back a few points with a second scan.
+3. **Practical takeaway:** a single scan captures the large majority of what a
+   model can detect; **k=2 is a reasonable budget** for the cheaper models, and
+   there is no evidence that many scans meaningfully surface additional obscure
+   bugs on this corpus. (Cross-function is a single bug, so its 0%→100% jump for
+   Gemini is noise, not signal.)
+
+### Temperature — the lever behind the discovery curve
+
+`gpt-4.1-mini`, detection@5, sweeping sampling temperature (the frontier Claude
+models are excluded — the adapter can't send temperature, they reject it):
+
+| Temp | @1 | @2 | @3 | @4 | @5 | FPs |
+|---|---:|---:|---:|---:|---:|---:|
+| 0.0 | 75% | 75% | 75% | 75% | 75% | 8 |
+| 1.0 | 71% | 75% | 75% | 77% | **79%** | 8 |
+| 1.5 | 71% | 73% | 77% | 77% | **79%** | 9 |
+
+1. **Temperature *is* what makes repeated scans work.** At **temp 0 the curve is
+   flat** (deterministic — scans 2–5 reproduce scan 1 exactly); at **temp ≥1
+   repeated scans recover ~8 points** by sampling diverse outputs. The earlier
+   flat curves were a low-diversity effect, now confirmed causally.
+2. **Single-shot vs. multi-shot inverts.** One temp-0 scan (75%) *beats* one
+   temp-1 scan (71%) — greedy decoding is more accurate per shot — but multi-scan
+   temp-1 overtakes it (79% vs 75%) via accumulated diversity.
+3. **~1.0 is the sweet spot.** temp 1.5 matches 1.0 on recall but adds a false
+   positive; going hotter buys noise, not bugs.
+4. **Actionable:** budget one scan → use temp 0; budget several scans → temp ~1.0.
+   Don't exceed 1.0.
+
+## Ensemble — do multiple detectors help?
+
+Combining detectors on the *union* of found bugs (reproduce with
+`python -m securepatch_bench ensemble`).
+
+**regex + AI (cheap safety net)** — union of a model with the regex baseline:
+
+| Model | alone | + regex | gain |
+|---|---:|---:|---:|
+| qwen2.5-coder:7b | 62% | 66% | +2 |
+| gpt-4.1-mini     | 79% | 82% | +2 |
+| gemini-2.5-flash | 86% | 89% | +2 |
+| opus-4-8         | 93% | 93% | +0 |
+| sonnet-4-6       | 95% | 95% | +0 |
+
+**Union / voting:**
+
+| Ensemble | recall |
+|---|---:|
+| best single (Sonnet) | 95% (53/56) |
+| **all AI models (union)** | **95% (53/56)** |
+| all AI + regex (union) | 95% (53/56) |
+| voting ≥2 detectors | 93% (52/56) |
+| voting ≥3 detectors | 91% (51/56) |
+
+**Findings — mostly a negative result, which is the interesting part:**
+1. **Ensembling does NOT improve recall.** The union of all six detectors equals
+   the best single model (Sonnet, 53/56). Every bug any detector finds, Sonnet
+   also finds — the detectors are **nested (a strict hierarchy), not
+   complementary**. Only Sonnet has a *unique* catch (1 bug); every other
+   detector's unique count is **0**.
+2. **A hard ceiling of 3 bugs** is found by *no* detector: `js-cwe_943_0`,
+   `py-cwe_943_0` (NoSQL injection) and `py-cwe_400_0` (resource exhaustion).
+   These need better detection, not more models.
+3. **regex adds a cheap +2** to the *sub-frontier* models (Ollama/OpenAI/Gemini)
+   — the syntactic safety net for the trivial bugs they drop — but nothing to the
+   Claude models. So "ensemble with regex" only matters if you're already using a
+   cheaper model.
+4. **Ensembling's real value is precision, not recall.** Requiring ≥2 detectors to
+   agree keeps 93% recall (−2 pp) while discarding lone-detector findings — a
+   near-free way to cut false positives (e.g. Ollama's 30). That reframes the
+   "multiple models" question: vote to *raise precision*, don't union to raise
+   recall.
+
+**Practical takeaway:** for recall, **use the single best model** — do not pay for
+an ensemble. Add regex only under a cheaper model; use voting only to cut FPs.
+
+## Verification — can an AI judge remove false positives?
+
+An LLM-as-judge second pass: each finding is re-examined in isolation ("is this a
+real vulnerability? keep/reject", temperature 0), and we score precision/recall
+before vs. after against ground truth (`verify-findings` command). *Detection here
+is a single fresh scan, so the "before" recall differs slightly from the @3 table.*
+
+| Detector → Judge | precision | recall | FPs removed | real bugs dropped |
+|---|---:|---:|---:|---:|
+| OpenAI → OpenAI (self) | 83% → 82% | 71% → 66% | 0 / 8 | 3 |
+| Sonnet → Sonnet (self) | 78% → 78% | 93% → 91% | 1 / 15 | 1 |
+| OpenAI → Sonnet (strong→strong) | 81% → 81% | 70% → 68% | 0 / 9 | 1 |
+| **Ollama → Sonnet (weak→strong)** | **54% → 61%** | 55% → 54% | **7 / 26** | 1 |
+
+**Findings:**
+1. **Self-verification does not work.** A model removes ~0 of *its own* false
+   positives — it is confident in the findings it just made (confirmation, not
+   critique) — and over-rejects a taint bug or two. True for both OpenAI and
+   Sonnet.
+2. **A strong judge over a strong detector also does nothing** (Sonnet removes 0
+   of OpenAI's FPs). The reason is subtle and important: a capable detector's
+   "false positives" are mostly **plausible real-but-unlabeled findings** (extra
+   issues beyond the one labeled bug per case), which the judge *correctly keeps*.
+   The matcher's FP count is inflated by **incomplete ground truth**, not model
+   noise — no judge can (or should) remove those.
+3. **A strong judge over a *weak* detector works** — Sonnet removes **7/26 (27%)**
+   of Ollama's FPs for **+7 pts precision** at **−1 pt recall**. When there is a
+   real capability gap, the judge rejects the weak model's genuine junk.
+4. **Consistent ~1-bug recall tax:** the single-finding view can't trace taint to
+   its source, so it occasionally rejects a real SQL-injection (`js-sqli-concat`).
+
+**Design answer — what to do:**
+- **Same model: no.** Self-verification is useless (correlated errors).
+- **Different, *stronger* model as judge: yes — but only across a capability gap.**
+  The "detect cheap/local, verify with a frontier model" recipe cuts a weak
+  detector's FPs (Ollama +7 pts precision). For a frontier detector, verification
+  adds nothing.
+- **Never a weaker judge** (it would reject true findings, per the ensemble
+  hierarchy).
+- **The bigger lever is the benchmark, not a verifier:** for capable models,
+  reduce apparent FPs by **completing the ground-truth labels**, not by adding a
+  judge.
+
 ---
 
 # Part 2 — Fix + Verify
@@ -91,49 +242,50 @@ present, nothing broke) / `error`.
 
 ## Verdict distribution (full 56 cases; Ollama = 12)
 
-| Verdict | OpenAI mini | Gemini flash | Sonnet | Ollama 7b (12) |
-|---|---:|---:|---:|---:|
-| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 2 (17%) |
-| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 10 (83%) |
-| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 0 |
-| ✗ error      | 0        | 0        | 0        | 0 |
+| Verdict | OpenAI mini | Gemini flash | Sonnet | Opus | Ollama 7b (12) |
+|---|---:|---:|---:|---:|---:|
+| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 34 (61%) | 2 (17%) |
+| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 17 (30%) | 10 (83%) |
+| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 5 (9%)   | 0 |
+| ✗ error      | 0        | 0        | 0        | 0        | 0 |
 
 ## The `regressed` count is noisy — use functional-fix instead
 
 The strict `fixed` verdict marks a fix regressed if the **AI re-scan flags any new
 finding**, and that re-scan is stochastic. Breaking `regressed` down by real cause:
 
-| Regressed cause | OpenAI | Gemini | Sonnet | Ollama(12) |
-|---|---:|---:|---:|---:|
-| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 3 |
-| test failure (real) | 9 | 7 | 10 | 3 |
-| compile failure (real) | 2 | **15** | 6 | 4 |
+| Regressed cause | OpenAI | Gemini | Sonnet | Opus | Ollama(12) |
+|---|---:|---:|---:|---:|---:|
+| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 11 | 3 |
+| test failure (real) | 9 | 7 | 10 | 6 | 3 |
+| compile failure (real) | 2 | **15** | 6 | 0 | 4 |
 
 **Functional-fix rate** (vuln removed **and** compiles **and** tests/oracle pass,
 ignoring the new-finding signal) is the fairer measure:
 
-| Metric | OpenAI | Gemini | Sonnet | Ollama(12) |
-|---|---:|---:|---:|---:|
-| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 17% |
-| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | 25% |
-| real breakage (compile+test) | 11 | 22 | 16 | 7 |
+| Metric | OpenAI | Gemini | Sonnet | Opus | Ollama(12) |
+|---|---:|---:|---:|---:|---:|
+| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 61% | 17% |
+| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | **80%** | 25% |
+| real breakage (compile+test) | 11 | 22 | 16 | 6 | 7 |
 
 ### Apples-to-apples: functional-fix on the SAME 12 Docker-free cases
 
 | Model | functional-fix (of 12) |
 |---|---:|
-| OpenAI mini | **8 / 12 (67%)** |
+| **Opus**    | **11 / 12 (92%)** |
+| OpenAI mini | 8 / 12 (67%) |
 | Sonnet      | 6 / 12 (50%) |
 | Gemini flash| 5 / 12 (42%) |
 | Ollama 7b   | 3 / 12 (25%) |
 
 ## Fix verdicts by collection (fixed / regressed / no-op)
 
-| Collection | OpenAI | Gemini | Sonnet | Ollama |
-|---|---|---|---|---|
-| cweval (Docker oracle) | 20 / 18 / 6 | 21 / 23 / 0 | 14 / 27 / 3 | _not run_ |
-| literature | 2 / 4 / 0 | 1 / 5 / 0 | 2 / 4 / 0 | 1 / 5 / 0 |
-| seeded     | 5 / 1 / 0 | 3 / 3 / 0 | 3 / 3 / 0 | 1 / 5 / 0 |
+| Collection | OpenAI | Gemini | Sonnet | Opus | Ollama |
+|---|---|---|---|---|---|
+| cweval (Docker oracle) | 20 / 18 / 6 | 21 / 23 / 0 | 14 / 27 / 3 | 25 / 14 / 5 | _not run_ |
+| literature | 2 / 4 / 0 | 1 / 5 / 0 | 2 / 4 / 0 | 5 / 1 / 0 | 1 / 5 / 0 |
+| seeded     | 5 / 1 / 0 | 3 / 3 / 0 | 3 / 3 / 0 | 4 / 2 / 0 | 1 / 5 / 0 |
 
 ## Fix cost & time
 
@@ -142,28 +294,40 @@ ignoring the new-finding signal) is the fairer measure:
 | OpenAI mini | $0.028 | $0.0005 | ~12.3 min | `results/fix_openai.jsonl` |
 | Gemini flash| $0.047 | $0.0008 | ~28.7 min | `results/fix_gemini.jsonl` |
 | Sonnet      | $0.330 | $0.0059 | ~17.7 min | `results/fix_sonnet.jsonl` |
+| Opus        | $0.731 | $0.0131 | ~12.6 min | `results/fix_opus.jsonl` |
 | Ollama 7b (12) | $0.000 | $0.0000 | ~2 min | `results/fix_ollama.jsonl` |
 
 ## Fix observations
 
-1. **Detection skill ≠ fixing skill.** Sonnet is the *best detector* (95%) but the
-   *weakest API fixer* by functional-fix (62%); the *cheapest* model, OpenAI
-   `gpt-4.1-mini`, is the **best fixer** (68% full, 67% on the shared 12) at ~12×
-   lower cost. Fixing and finding are different capabilities.
-2. **Gemini breaks compilation the most** — 15 of its 31 regressions are compile
-   failures (vs OpenAI 2, Sonnet 6). Its whole-file rewrites more often emit
-   code that doesn't parse.
-3. **The local 7b is a weak fixer** — 25% functional-fix on the shared 12 vs
-   42–67% for the API models, with the most compile/test breakage per case. Free,
+1. **Detection skill ≠ fixing skill — but frontier scale still wins overall.**
+   Sonnet is the *best detector* (95%) yet the *weakest Anthropic fixer* by
+   functional-fix (62%); its sibling **Opus is the best fixer of any model
+   tested** (80% full-56, **92% on the shared 12**) at ~2.2× Sonnet's fix cost.
+   So the "detect ≠ fix" gap is real *within* a model family (Sonnet's ranking
+   flips between the two tasks), but it is not a small-model-wins story once
+   you compare against Opus: raw capability still dominates once cost is not
+   the deciding constraint. `gpt-4.1-mini` remains the best **cost-adjusted**
+   fixer (67% functional-fix at ~$0.0002/attempt vs Opus's $0.0131 — a ~65×
+   cost gap for 25 fewer points).
+2. **Opus is also the "cleanest" fixer** — 0 compile failures across all 56
+   attempts (vs OpenAI 2, Sonnet 6, Gemini 15), and only 6 real test failures.
+   Its regressions are almost entirely the noisy new-finding-only kind (11/17).
+3. **Gemini breaks compilation the most** — 15 of its 31 regressions are compile
+   failures (vs OpenAI 2, Sonnet 6, Opus 0). Its whole-file rewrites more often
+   emit code that doesn't parse.
+4. **The local 7b is a weak fixer** — 25% functional-fix on the shared 12 vs
+   42–92% for the API models, with the most compile/test breakage per case. Free,
    but not yet good enough to fix unsupervised.
-4. **`regressed` needs the reason breakdown to mean anything** — roughly half of
+5. **`regressed` needs the reason breakdown to mean anything** — roughly half of
    all regressions are noisy "new-finding-only" from the stochastic re-scan. Next
    improvement: gate new-findings with a *deterministic* detector (regex, or the
    oracle's own security check) instead of the AI re-scan.
-5. **The Docker oracle scaled cleanly** — 43–44 of 56 cases verified with the
-   exploit-based `security` oracle, zero pipeline errors across three full runs.
-6. **Best "product" recipe so far:** detect with Sonnet (or an ensemble incl.
-   regex), **fix with `gpt-4.1-mini`** — highest fix success at lowest cost.
+6. **The Docker oracle scaled cleanly** — 43–44 of 56 cases verified with the
+   exploit-based `security` oracle, zero pipeline errors across four full runs.
+7. **Two "product" recipes, by budget:** cost-sensitive → detect with Sonnet,
+   **fix with `gpt-4.1-mini`** (cheapest good fixer); quality-first → **detect
+   and fix with Opus** (best fixer, and ties Opus/Sonnet at 100% on syntactic
+   detection) if the ~13×-vs-Sonnet fix cost is acceptable.
 
 ---
 
@@ -193,6 +357,7 @@ docker build -t securepatch-cweval docker/
 python -m securepatch_bench fix --provider openai --model gpt-4.1-mini --record results/fix_openai.jsonl
 python -m securepatch_bench fix --provider gemini --model gemini-2.5-flash --record results/fix_gemini.jsonl
 python -m securepatch_bench fix --provider anthropic --model claude-sonnet-4-6 --record results/fix_sonnet.jsonl
+python -m securepatch_bench fix --provider anthropic --model claude-opus-4-8 --record results/fix_opus.jsonl
 # Ollama: Docker-free scopes only (see caveat)
 python -m securepatch_bench fix --provider ollama --model qwen2.5-coder:7b --collection seeded --record results/fix_ollama.jsonl
 python -m securepatch_bench fix --provider ollama --model qwen2.5-coder:7b --collection literature --record results/fix_ollama.jsonl
