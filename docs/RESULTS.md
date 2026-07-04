@@ -11,9 +11,9 @@ Raw per-case rows live in `harness/results/*.jsonl` (gitignored); this file is t
 human-readable summary we keep in version control. See
 [`RESEARCH_PLAN.md`](RESEARCH_PLAN.md) §3 for metric definitions.
 
-**Models under test:** regex (baseline), OpenAI `gpt-4.1-mini`, Google Gemini
-`2.5-flash`, Anthropic Sonnet `4-6`, Anthropic Opus `4-8`, and a local Ollama
-`qwen2.5-coder:7b` (runs on-machine, $0).
+**Models under test:** regex (baseline), **Semgrep (off-the-shelf SAST baseline)**,
+OpenAI `gpt-4.1-mini`, Google Gemini `2.5-flash`, Anthropic Sonnet `4-6`, Anthropic
+Opus `4-8`, and a local Ollama `qwen2.5-coder:7b` (runs on-machine, $0).
 
 ---
 
@@ -23,29 +23,46 @@ human-readable summary we keep in version control. See
 ground-truth bug. AI detectors run `--scans 3` → **detection@3** (found in any of
 3 scans).
 
+## SAST baseline: Semgrep
+
+Added a second, *off-the-shelf* baseline alongside the homemade regex rules so the
+"floor" in the paper isn't just our own code. **Tool: [Semgrep](https://semgrep.dev)
+OSS (`pip install semgrep`, no account/API key needed)** — the most widely cited
+installable SAST tool that covers both corpus languages (Python + JS/TS) in one
+engine; Bandit was considered but is Python-only, and CodeQL requires a compiled
+database + CLI setup that's much heavier for a 56-case corpus. **Rulesets:**
+Semgrep Registry `p/security-audit` + `p/owasp-top-ten` + `p/secrets` (community
+security rules, run with `--metrics=off`, no telemetry). Findings are mapped from
+Semgrep's `cwe` rule metadata to our vocabulary via the exact CWE→type table
+already implied by every case's `ground_truth.json` (see
+`securepatch_bench/detectors.py::SAST_CWE_TO_TYPE`) — not a hand-tuned guess.
+Wired in as `--detector sast`, scored by the same matcher as every other
+detector, over the same 56 cases (`results/sast_semgrep.jsonl`).
+
 ## Recall by obscurity tier
 
-| Tier | Cases | Regex | Ollama 7b | OpenAI mini | Gemini 2.5-flash | Opus 4-8 | Sonnet 4-6 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| syntactic       | 10 | **100%** | 80% | 80% | 80% | **100%** | **100%** |
-| local-semantic  | 45 | 20% | 58% | 78% | 87% | 91% | **93%** |
-| cross-function  | 1  | 0% | **100%** | **100%** | **100%** | **100%** | **100%** |
-| **Overall**     | 56 | 34% (19) | 62% (35) | 79% (44) | 86% (48) | 93% (52) | **95% (53)** |
-| False positives | —  | 3 | **30** | 8 | 8 | 10 | 13 |
+| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | Opus 4-8 | Sonnet 4-6 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| syntactic       | 10 | **100%** | 40% | 80% | 80% | 80% | **100%** | **100%** |
+| local-semantic  | 45 | 20% | 16% | 58% | 78% | 87% | 91% | **93%** |
+| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** |
+| **Overall**     | 56 | 34% (19) | 20% (11) | 62% (35) | 79% (44) | 86% (48) | 93% (52) | **95% (53)** |
+| False positives | —  | 3 | **2** | 30 | 8 | 8 | 10 | 13 |
 
 ## Recall by collection
 
-| Collection | Cases | Regex | Ollama | OpenAI | Gemini | Opus | Sonnet |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| cweval     | 44 | 20% | 57% | 77% | 86% | 91% | **93%** |
-| literature | 6  | 83% | 83% | 83% | 83% | **100%** | **100%** |
-| seeded     | 6  | 83% | 83% | 83% | 83% | **100%** | **100%** |
+| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | Opus | Sonnet |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| cweval     | 44 | 20% | 16% | 57% | 77% | 86% | 91% | **93%** |
+| literature | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** |
+| seeded     | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** |
 
 ## Detection cost & time
 
 | Detector | Cost | $/case | Wall | Notes |
 |---|---:|---:|---:|---|
 | regex        | $0.000 | $0.0000 | <1s      | deterministic |
+| Semgrep      | $0.000 | $0.0000 | ~7.9 min | local; ~8.4s/case (per-file process + rule load overhead) |
 | Ollama 7b    | $0.000 | $0.0000 | ~57 min  | local; ~4× slower/case |
 | OpenAI mini  | $0.053 | $0.0009 | ~4.4 min | |
 | Gemini flash | $0.085 | $0.0015 | ~15.7 min| |
@@ -66,6 +83,23 @@ ground-truth bug. AI detectors run `--scans 3` → **detection@3** (found in any
    Claude models don't. Argues for an **ensemble (regex ∪ AI)** safety net.
 5. **False positives rise with recall** (3 → 8 → 8 → 10 → 13), and blow up for the
    local model (30). Per-category FP breakdown is a Week 4 task.
+6. **A real off-the-shelf SAST tool does *worse* than our own regex rules on this
+   corpus (20% vs 34%) — and both are far behind every AI model.** This is the
+   important methodological result: Semgrep's community rules are written to
+   pattern-match real framework/library call sites (`cursor.execute()`,
+   `subprocess.call(shell=True)`, etc.), and a large share of our cases —
+   especially the CWEval-derived ones, which are short self-contained functions
+   rather than app code wired to a real DB/HTTP framework — don't hit those
+   patterns even though the vulnerability is genuine. Semgrep's syntactic-tier
+   recall (40%) is *below* our regex baseline's (100%) for the same reason: our
+   regex rules were hand-tuned against this exact corpus, which is an admitted
+   bias in the *regex* baseline, not a flaw in Semgrep. **Practically:** Semgrep
+   is the more defensible academic baseline (an independent, widely-cited tool,
+   not overfit to our cases) precisely because it does worse — it establishes
+   that "the floor a generic tool achieves on obscure/task-style vulnerability
+   code" is low, which is the gap the paper's AI-detection numbers are filling.
+   It is also by far the lowest-noise detector (2 FPs, beating even the regex
+   baseline's 3), consistent with rule-based tools trading recall for precision.
 
 ## Detection@k — how many scans to find a bug?
 
@@ -346,6 +380,8 @@ Run from `harness/` (keys in `harness/.env`):
 ```bash
 # --- Part 1: detection (@3) ---
 python -m securepatch_bench bench --record results/full_regex.jsonl
+pip install semgrep  # off-the-shelf SAST baseline, no key needed
+python -m securepatch_bench bench --detector sast --record results/sast_semgrep.jsonl
 for p in "openai --model gpt-4.1-mini" "gemini --model gemini-2.5-flash" \
          "anthropic --model claude-sonnet-4-6" "ollama --model qwen2.5-coder:7b"; do
   python -m securepatch_bench bench --detector ai --provider $p --scans 3 \

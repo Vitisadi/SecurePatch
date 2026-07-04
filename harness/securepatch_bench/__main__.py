@@ -30,7 +30,7 @@ from . import fixloop as fixloop_mod
 from . import verifier as verifier_mod
 from .corpus import CorpusError, OBSCURITY_TIERS, DEFAULT_CORPUS_DIR
 from .core_bridge import CoreBridgeError, scan_file
-from .detectors import AIDetector, Detector, RegexDetector
+from .detectors import AIDetector, Detector, RegexDetector, SastDetector, SastDetectorError
 from .fixer import AIFixer
 from .providers import ProviderError, get_provider
 from .results import ResultWriter
@@ -117,13 +117,15 @@ def _build_detector(args: argparse.Namespace) -> Detector:
         return AIDetector(
             provider, model=args.model, temperature=getattr(args, "temperature", None)
         )
+    if args.detector == "sast":
+        return SastDetector()
     return RegexDetector()
 
 
 def _cmd_bench(args: argparse.Namespace) -> int:
     try:
         detector = _build_detector(args)
-    except ProviderError as exc:
+    except (ProviderError, SastDetectorError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
@@ -518,9 +520,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     bench.add_argument(
         "--detector",
-        choices=["regex", "ai"],
+        choices=["regex", "ai", "sast"],
         default="regex",
-        help="Detector to score (default: regex).",
+        help="Detector to score (default: regex). 'sast' runs Semgrep "
+        "(pip install semgrep) with the security-audit/owasp-top-ten/secrets "
+        "rulesets.",
     )
     bench.add_argument(
         "--provider",
