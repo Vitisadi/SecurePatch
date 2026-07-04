@@ -24,10 +24,16 @@ from .base import (
     estimate_cost,
 )
 
+# Free-tier Gemini is aggressively rate-limited (429 RESOURCE_EXHAUSTED). Retry a
+# few times with exponential backoff so a long benchmark run rides through the
+# per-minute caps instead of erroring out.
+_MAX_RETRIES = 5
+_BACKOFF_BASE_S = 8.0
+
 
 class GeminiProvider(ModelProvider):
     id = "gemini"
-    default_model = "gemini-2.0-flash"
+    default_model = "gemini-2.5-flash"  # 2.0-flash has zero free-tier quota
 
     def __init__(self) -> None:
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -55,12 +61,7 @@ class GeminiProvider(ModelProvider):
             config["temperature"] = request.temperature
 
         start = time.perf_counter()
-        try:
-            resp = self._client.models.generate_content(
-                model=request.model, contents=request.prompt, config=config
-            )
-        except Exception as exc:  # noqa: BLE001 - surface any SDK/transport error
-            raise ProviderError(f"Gemini request failed: {exc}") from exc
+        resp = self._generate_with_retry(request, config)
         latency_ms = (time.perf_counter() - start) * 1000
 
         text = getattr(resp, "text", None) or ""
@@ -78,3 +79,23 @@ class GeminiProvider(ModelProvider):
             ),
             raw=resp.model_dump() if hasattr(resp, "model_dump") else None,
         )
+
+    def _generate_with_retry(self, request: ModelRequest, config: dict):
+        """Call generate_content, retrying rate-limit (429) errors with backoff."""
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                return self._client.models.generate_content(
+                    model=request.model, contents=request.prompt, config=config
+                )
+            except Exception as exc:  # noqa: BLE001 - inspect for rate limiting
+                last_exc = exc
+                if not _is_rate_limit(exc) or attempt == _MAX_RETRIES - 1:
+                    raise ProviderError(f"Gemini request failed: {exc}") from exc
+                time.sleep(_BACKOFF_BASE_S * (2**attempt))
+        raise ProviderError(f"Gemini request failed: {last_exc}")  # unreachable
+
+
+def _is_rate_limit(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "429" in text or "resource_exhausted" in text or "rate limit" in text

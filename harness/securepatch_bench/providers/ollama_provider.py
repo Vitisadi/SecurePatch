@@ -36,8 +36,12 @@ class OllamaProvider(ModelProvider):
                 "the 'ollama' package is not installed; run "
                 "`pip install -e .[providers]` from harness/."
             ) from exc
+        # A generous per-request timeout: enough for a cold model load from disk,
+        # but bounded so a hung local server fails the call instead of blocking
+        # the whole run forever (override with OLLAMA_TIMEOUT seconds).
+        timeout = float(os.environ.get("OLLAMA_TIMEOUT", "600"))
         host = os.environ.get("OLLAMA_HOST")
-        self._client = ollama.Client(host=host) if host else ollama.Client()
+        self._client = ollama.Client(host=host, timeout=timeout)
 
     def complete(self, request: ModelRequest) -> ModelResponse:
         messages = []
