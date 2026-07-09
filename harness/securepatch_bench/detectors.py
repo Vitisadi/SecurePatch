@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
+from ._proc import run_captured
 from .core_bridge import scan_file
 from .corpus import KNOWN_TYPES
 from .providers.base import ModelProvider, ModelRequest, ModelUsage, ProviderError
@@ -61,6 +63,130 @@ class RegexDetector:
     def scan(self, source_file: Path) -> DetectorScan:
         result = scan_file(source_file)
         return DetectorScan(detector=result.detector, findings=result.findings)
+
+
+class SastDetectorError(RuntimeError):
+    """Raised when the semgrep binary is missing or its output can't be parsed."""
+
+
+# CWE-number -> our vocabulary, derived directly from every ground_truth.json
+# in the corpus (see benchmarks/*/*/ground_truth.json) so the mapping matches
+# exactly what the matcher expects, not a guess at semgrep's taxonomy.
+SAST_CWE_TO_TYPE = {
+    "20": "improper-input-validation",
+    "22": "path-traversal",
+    "78": "command-injection",
+    "79": "xss",
+    "89": "sql-injection",
+    "95": "code-injection",
+    "113": "http-response-splitting",
+    "117": "log-injection",
+    "326": "weak-cryptography",
+    "327": "weak-cryptography",
+    "329": "weak-cryptography",
+    "338": "weak-randomness",
+    "347": "improper-signature-verification",
+    "377": "insecure-temp-file",
+    "400": "resource-exhaustion",
+    "502": "deserialization",
+    "643": "xpath-injection",
+    "732": "incorrect-permissions",
+    "760": "weak-cryptography",
+    "798": "hardcoded-secret",
+    "918": "ssrf",
+    "943": "nosql-injection",
+    "1333": "redos",
+}
+
+_CWE_NUM_RE = re.compile(r"CWE-(\d+)")
+
+DEFAULT_SEMGREP_CONFIGS = ("p/security-audit", "p/owasp-top-ten", "p/secrets")
+
+
+class SastDetector:
+    """Off-the-shelf static analysis via Semgrep (``pip install semgrep``).
+
+    Runs Semgrep's community security rulesets against a single file and maps
+    each finding's CWE metadata onto our vocabulary via :data:`SAST_CWE_TO_TYPE`
+    so it scores through the same matcher as the regex and AI detectors.
+    Findings whose CWE isn't in our vocabulary are kept with a synthetic
+    ``sast-unmapped:<rule-id>`` type — they can never match a bug, so they
+    still count honestly as noise/false positives rather than being hidden.
+    """
+
+    name = "sast:semgrep"
+
+    def __init__(self, configs: tuple[str, ...] = DEFAULT_SEMGREP_CONFIGS) -> None:
+        if shutil.which("semgrep") is None:
+            raise SastDetectorError(
+                "semgrep not found on PATH. Install it with `pip install semgrep`."
+            )
+        self.configs = configs
+
+    def scan(self, source_file: Path) -> DetectorScan:
+        path = Path(source_file)
+        cmd = ["semgrep", "--quiet", "--json", "--metrics=off"]
+        for config in self.configs:
+            cmd += ["--config", config]
+        cmd.append(str(path))
+
+        try:
+            proc = run_captured(cmd, timeout=120)
+        except OSError as exc:
+            return DetectorScan(detector=self.name, findings=[], error=str(exc))
+
+        if proc.returncode not in (0, 1):  # 1 = findings present, still success
+            return DetectorScan(
+                detector=self.name, findings=[], error=proc.stderr.strip()[:500]
+            )
+
+        try:
+            payload = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            return DetectorScan(
+                detector=self.name, findings=[], error=f"bad semgrep JSON: {exc}"
+            )
+
+        findings = [
+            f
+            for f in (self._to_finding(r, index) for index, r in enumerate(payload.get("results", [])))
+            if f is not None
+        ]
+        return DetectorScan(detector=self.name, findings=findings, raw=payload)
+
+    @staticmethod
+    def _to_finding(result: dict[str, Any], index: int) -> Optional[dict[str, Any]]:
+        check_id = str(result.get("check_id", f"semgrep-{index}"))
+        metadata = result.get("extra", {}).get("metadata", {}) or {}
+        cwe_field = metadata.get("cwe", [])
+        cwe_list = cwe_field if isinstance(cwe_field, list) else [cwe_field]
+
+        vuln_type = None
+        cwe_label = ""
+        for entry in cwe_list:
+            match = _CWE_NUM_RE.search(str(entry))
+            if match and match.group(1) in SAST_CWE_TO_TYPE:
+                vuln_type = SAST_CWE_TO_TYPE[match.group(1)]
+                cwe_label = f"CWE-{match.group(1)}"
+                break
+        if vuln_type is None:
+            vuln_type = f"sast-unmapped:{check_id}"
+            if cwe_list:
+                m = _CWE_NUM_RE.search(str(cwe_list[0]))
+                cwe_label = f"CWE-{m.group(1)}" if m else ""
+
+        start_line = result.get("start", {}).get("line", 1)
+        return {
+            "id": check_id,
+            "type": vuln_type,
+            "line": max(int(start_line) - 1, 0),  # 0-based, matching core findings
+            "column": max(int(result.get("start", {}).get("col", 1)) - 1, 0),
+            "severity": str(metadata.get("severity", result.get("extra", {}).get("severity", "medium"))).lower(),
+            "title": check_id,
+            "description": str(result.get("extra", {}).get("message", "")),
+            "cwe": cwe_label,
+            "source": "sast",
+        }
 
 
 DETECTION_SYSTEM = (
