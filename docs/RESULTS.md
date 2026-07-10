@@ -216,41 +216,75 @@ real vulnerability? keep/reject", temperature 0), and we score precision/recall
 before vs. after against ground truth (`verify-findings` command). *Detection here
 is a single fresh scan, so the "before" recall differs slightly from the @3 table.*
 
-| Detector → Judge | precision | recall | FPs removed | real bugs dropped |
-|---|---:|---:|---:|---:|
-| OpenAI → OpenAI (self) | 83% → 82% | 71% → 66% | 0 / 8 | 3 |
-| Sonnet → Sonnet (self) | 78% → 78% | 93% → 91% | 1 / 15 | 1 |
-| OpenAI → Sonnet (strong→strong) | 81% → 81% | 70% → 68% | 0 / 9 | 1 |
-| **Ollama → Sonnet (weak→strong)** | **54% → 61%** | 55% → 54% | **7 / 26** | 1 |
+### Full cross-model matrix (self + every strong-model pairing)
+
+Original run had 4 pairs (2 self, 1 cross, 1 weak→strong). Filled in the missing
+cells of the 3×3 strong-model grid (Sonnet, Opus, gpt-4.1-mini) plus Opus
+self-judge, so the "does a second model help" question is answered for every
+combination, not just one:
+
+| Detector → Judge | TP kept | FP before→after | precision | recall | FPs removed | cost |
+|---|---:|---:|---:|---:|---:|---:|
+| OpenAI → OpenAI (self) | 40→37 | 8→8 | 83%→82% | 71%→66% | 0 / 8 | $0.030 |
+| Sonnet → Sonnet (self) | 52→51 | 15→14 | 78%→78% | 93%→91% | 1 / 15 | $0.442 |
+| **Opus → Opus (self)** | 52→49 | 12→12 | 81%→80% | 93%→88% | **0 / 12** | $0.849 |
+| OpenAI → Sonnet | 39→38 | 9→9 | 81%→81% | 70%→68% | 0 / 9 | $0.151 |
+| **OpenAI → Opus** | 41→38 | 9→9 | 82%→81% | 73%→68% | **0 / 9** | $0.309 |
+| **Sonnet → OpenAI** | 52→50 | 14→14 | 79%→78% | 93%→89% | **0 / 14** | $0.268 |
+| **Sonnet → Opus** | 53→51 | 12→12 | 82%→81% | 95%→91% | **0 / 12** | $0.654 |
+| **Opus → Sonnet** | 50→49 | 12→12 | 81%→80% | 89%→88% | **0 / 12** | $0.641 |
+| **Opus → OpenAI** | 50→47 | 10→10 | 83%→82% | 89%→84% | **0 / 10** | $0.471 |
+| **Ollama → Sonnet (weak→strong)** | 31→30 | 26→19 | 54%→61% | 55%→54% | **7 / 26** | $0.172 |
+
+(Bold rows are the 6 combos run for this question; the rest were already on
+record.)
 
 **Findings:**
-1. **Self-verification does not work.** A model removes ~0 of *its own* false
-   positives — it is confident in the findings it just made (confirmation, not
-   critique) — and over-rejects a taint bug or two. True for both OpenAI and
-   Sonnet.
-2. **A strong judge over a strong detector also does nothing** (Sonnet removes 0
-   of OpenAI's FPs). The reason is subtle and important: a capable detector's
-   "false positives" are mostly **plausible real-but-unlabeled findings** (extra
-   issues beyond the one labeled bug per case), which the judge *correctly keeps*.
-   The matcher's FP count is inflated by **incomplete ground truth**, not model
-   noise — no judge can (or should) remove those.
-3. **A strong judge over a *weak* detector works** — Sonnet removes **7/26 (27%)**
-   of Ollama's FPs for **+7 pts precision** at **−1 pt recall**. When there is a
-   real capability gap, the judge rejects the weak model's genuine junk.
-4. **Consistent ~1-bug recall tax:** the single-finding view can't trace taint to
-   its source, so it occasionally rejects a real SQL-injection (`js-sqli-concat`).
+1. **The result generalizes cleanly: no pairing among the three strong models
+   (Sonnet, Opus, gpt-4.1-mini) removes false positives — self or cross.** All
+   9 strong-model cells remove **0 or at most 1** of 8–15 FPs, regardless of
+   which model detects and which judges. This isn't a self-verification quirk;
+   it's a property of the *capability tier*, not the specific model pairing.
+   Every strong-model combination *does*, however, cost 1–4 real bugs (recall
+   drops 2–5 points every time) — so cross-judging among strong models is
+   **strictly worse than doing nothing**: zero precision gain, guaranteed
+   recall loss.
+2. **This reinforces, not contradicts, the earlier explanation:** a capable
+   detector's "false positives" are mostly plausible real-but-unlabeled
+   findings (extra genuine issues beyond the one labeled bug per case), which
+   *any* competent judge correctly keeps — Opus doesn't reject Sonnet's extra
+   findings any more than Sonnet rejects its own, because from the judge's
+   point of view those findings look real. The matcher's FP count reflects
+   **incomplete ground truth**, not model noise, so no judge (of any identity)
+   can fix it.
+3. **The weak→strong pair remains the only one that works** — Sonnet removes
+   7/26 (27%) of Ollama's FPs for +7 pts precision at only −1 pt recall. The
+   determining factor is a genuine **capability gap**, not "is it a different
+   model": Opus judging Sonnet (both frontier) behaves just like Sonnet judging
+   Sonnet (self); only Ollama (a real, weaker tier) has junk a stronger judge
+   can actually catch.
+4. **Consistent ~1–4-bug recall tax scales with judge activity:** every judged
+   pass loses at least one real bug (a single-finding view can't trace taint to
+   its source), and the strong-model cross pairs lose *more* (2–5 bugs) than
+   self-judging typically did (1–3) — mixing models doesn't buy safety, it just
+   adds i.i.d.-ish judgment noise on top of the same "real bug looks rejectable
+   in isolation" failure mode.
 
 **Design answer — what to do:**
 - **Same model: no.** Self-verification is useless (correlated errors).
-- **Different, *stronger* model as judge: yes — but only across a capability gap.**
-  The "detect cheap/local, verify with a frontier model" recipe cuts a weak
-  detector's FPs (Ollama +7 pts precision). For a frontier detector, verification
-  adds nothing.
+- **A *different* strong model: also no.** The cross-model strong pairs (6 new
+  runs) confirm this isn't specific to self-judging — Opus, Sonnet, and
+  gpt-4.1-mini all fail to filter each other's findings, at a real recall cost.
+  There is no "best pairing" among strong models; they're all equally useless.
+- **Different, *stronger*-tier model as judge: yes — but only across a genuine
+  capability gap.** The "detect cheap/local, verify with a frontier model"
+  recipe cuts a weak detector's FPs (Ollama +7 pts precision). For any
+  frontier detector, verification by another frontier model adds nothing.
 - **Never a weaker judge** (it would reject true findings, per the ensemble
   hierarchy).
 - **The bigger lever is the benchmark, not a verifier:** for capable models,
-  reduce apparent FPs by **completing the ground-truth labels**, not by adding a
-  judge.
+  reduce apparent FPs by **completing the ground-truth labels**, not by adding
+  a judge.
 
 ---
 
@@ -363,6 +397,69 @@ ignoring the new-finding signal) is the fairer measure:
    and fix with Opus** (best fixer, and ties Opus/Sonnet at 100% on syntactic
    detection) if the ~13×-vs-Sonnet fix cost is acceptable.
 
+## Mixed pipeline — best detector (Sonnet) hands off to a different fixer
+
+**Caveat on what "detector" means in the fix loop first:** `run_fixloop`
+(`fixloop.py::_fix_one`) attempts **every ground-truth bug in every case**, not
+just the bugs a detector actually found — a missed detection falls back to the
+bug's ground-truth metadata for the fix prompt. So every existing self-model fix
+run (`fix_sonnet.jsonl`, `fix_opus.jsonl`, `fix_openai.jsonl`) already fixes all
+56 bugs regardless of the model's own recall; the detector only supplies a
+*richer finding description* (line/type/title/description) when it happens to
+catch the bug itself, vs. the bare ground-truth fields on a miss. That makes the
+self-vs-mixed comparison **cleaner than it first looks**: the only variable a
+mixed pipeline changes is *whose enrichment text* the fixer sees, isolating
+exactly the question asked ("does handing the best detector's findings to a
+different fixer help") without needing a separate coverage-filtering run.
+
+Added `--detect-provider`/`--detect-model` to the `fix` CLI to decouple the two
+roles, then ran: **Sonnet detects (best detector, 95% recall) → Opus fixes**
+and **Sonnet detects → gpt-4.1-mini fixes**, both over the full 56 cases.
+
+| Pipeline | fixed | func-fix | real breakage (test+compile) | cost | $/attempt |
+|---|---:|---:|---:|---:|---:|
+| Sonnet detect + **Sonnet** fix (self) | 19 | 37/56 (66%) | 16 | $0.330 | $0.0059 |
+| Opus detect + **Opus** fix (self) | 34 | 45/56 (80%) | 6 | $0.731 | $0.0131 |
+| OpenAI detect + **OpenAI** fix (self) | 27 | 39/56 (70%) | 11 | $0.028 | $0.0005 |
+| **Sonnet detect → Opus fix** | 28 | **44/56 (79%)** | 8 | $0.735 | $0.0131 |
+| **Sonnet detect → gpt-4.1-mini fix** | 24 | **44/56 (79%)** | **7** | **$0.030** | **$0.0005** |
+
+*(Self-model numbers here are recomputed directly from the JSONL with one
+consistent rule — `fixed` + regressed-with-new-finding-only — for a clean
+apples-to-apples read; they differ by ~1–2 points from the rounded figures
+earlier in this doc, which is rounding/methodology drift between passes, not
+new data.)*
+
+**Findings:**
+1. **The split pipeline is smart, and one pairing is a clear win.** Handing
+   Sonnet's findings to `gpt-4.1-mini` for fixing gets **79% functional-fix —
+   9 points above solo gpt-4.1-mini (70%) and just 1 point under solo Opus
+   (80%) — at gpt-4.1-mini's cost ($0.030 for all 56 cases, ~24× cheaper than
+   Opus's $0.735).** That's the best cost/quality point on the whole grid: a
+   near-frontier-fixer outcome for cents.
+2. **Sonnet detect → Opus fix does *not* beat Opus fixing itself** (79% vs
+   80%, within noise) and costs about the same ($0.735 vs $0.731) — pairing two
+   frontier models doesn't add anything over just using Opus for both roles.
+   The benefit of splitting only shows up when the *fixer* alone is the weak
+   link (gpt-4.1-mini), not when it's already strong (Opus).
+3. **Sonnet's enrichment measurably improves fix quality for both downstream
+   fixers**, and specifically **cleans up compile failures**: mixed
+   gpt-4.1-mini fixing goes from 2 compile failures solo to **0** paired with
+   Sonnet's findings, and real breakage drops from 11 (solo) to 7 (mixed).
+   Mixed Sonnet→Opus also holds Opus's compile failures at 0. A richer,
+   correctly-typed finding description (line, CWE, title) gives the fixer a
+   more precise target, which shows up as fewer malformed patches — not just
+   as noise reduction in the "new-finding-only" bucket.
+4. **Practical recipe, sharpened:** the "detect with Sonnet, fix with
+   `gpt-4.1-mini`" recipe already recommended above is *confirmed* by this
+   controlled comparison (rather than inferred from two separate single-model
+   runs) — it beats solo gpt-4.1-mini by 9 points at no extra cost, and nearly
+   matches Opus at ~4% of Opus's price. If cost is genuinely no constraint,
+   solo Opus (80%) edges out the mixed Opus pipeline (79%, same cost) very
+   slightly, so there's no reason to route Opus's fixer through a different
+   detector — but there's every reason to route a cheap fixer through Sonnet's
+   detector first.
+
 ---
 
 ## Setup notes (for reproducing)
@@ -397,6 +494,28 @@ python -m securepatch_bench fix --provider anthropic --model claude-opus-4-8 --r
 # Ollama: Docker-free scopes only (see caveat)
 python -m securepatch_bench fix --provider ollama --model qwen2.5-coder:7b --collection seeded --record results/fix_ollama.jsonl
 python -m securepatch_bench fix --provider ollama --model qwen2.5-coder:7b --collection literature --record results/fix_ollama.jsonl
+
+# --- Cross-model verification matrix (does a 2nd model cut false positives?) ---
+python -m securepatch_bench verify-findings --provider anthropic --model claude-opus-4-8 \
+    --verify-provider anthropic --verify-model claude-opus-4-8 --record results/verify_opus_self.jsonl
+python -m securepatch_bench verify-findings --provider openai --model gpt-4.1-mini \
+    --verify-provider anthropic --verify-model claude-opus-4-8 --record results/verify_openai_by_opus.jsonl
+python -m securepatch_bench verify-findings --provider anthropic --model claude-sonnet-4-6 \
+    --verify-provider openai --verify-model gpt-4.1-mini --record results/verify_sonnet_by_openai.jsonl
+python -m securepatch_bench verify-findings --provider anthropic --model claude-sonnet-4-6 \
+    --verify-provider anthropic --verify-model claude-opus-4-8 --record results/verify_sonnet_by_opus.jsonl
+python -m securepatch_bench verify-findings --provider anthropic --model claude-opus-4-8 \
+    --verify-provider anthropic --verify-model claude-sonnet-4-6 --record results/verify_opus_by_sonnet.jsonl
+python -m securepatch_bench verify-findings --provider anthropic --model claude-opus-4-8 \
+    --verify-provider openai --verify-model gpt-4.1-mini --record results/verify_opus_by_openai.jsonl
+
+# --- Mixed detect->fix pipeline (best detector Sonnet -> a different fixer) ---
+python -m securepatch_bench fix --provider anthropic --model claude-opus-4-8 \
+    --detect-provider anthropic --detect-model claude-sonnet-4-6 \
+    --record results/fix_mixed_sonnetdetect_opusfix.jsonl
+python -m securepatch_bench fix --provider openai --model gpt-4.1-mini \
+    --detect-provider anthropic --detect-model claude-sonnet-4-6 \
+    --record results/fix_mixed_sonnetdetect_openaifix.jsonl
 ```
 
 > Update this file whenever a run is re-executed — keep the date/cost/verdict

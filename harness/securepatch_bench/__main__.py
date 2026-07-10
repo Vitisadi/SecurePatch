@@ -242,12 +242,18 @@ def _case_cost_line(usage) -> str:
 def _cmd_fix(args: argparse.Namespace) -> int:
     try:
         provider = get_provider(args.provider)
+        detect_provider = (
+            get_provider(args.detect_provider) if args.detect_provider else provider
+        )
     except ProviderError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
     fixer = AIFixer(provider, model=args.model)
-    detector = AIDetector(provider, model=args.model)
+    detector = AIDetector(
+        detect_provider,
+        model=args.detect_model if args.detect_provider else args.model,
+    )
 
     try:
         wall_start = time.perf_counter()
@@ -265,7 +271,10 @@ def _cmd_fix(args: argparse.Namespace) -> int:
         return 1
 
     tally = fixloop_mod.verdict_tally(report)
-    print(f"fixer={fixer.name}  attempts={len(report.attempts)}  window={args.window}")
+    print(
+        f"fixer={fixer.name}  detector={detector.name}  "
+        f"attempts={len(report.attempts)}  window={args.window}"
+    )
     print()
     print("per attempt:")
     for att in report.attempts:
@@ -313,6 +322,8 @@ def _cmd_fix(args: argparse.Namespace) -> int:
                         "phase": "fix",
                         "provider": args.provider,
                         "model": fixer.model,
+                        "detect_provider": args.detect_provider or args.provider,
+                        "detect_model": detector.model,
                         "case_id": att.case_id,
                         "collection": att.collection,
                         "bug_id": att.bug_id,
@@ -569,12 +580,26 @@ def build_parser() -> argparse.ArgumentParser:
     fix.add_argument(
         "--provider",
         required=True,
-        help="Model provider id used for both fixing and re-scan (openai | anthropic | gemini | ollama).",
+        help="Model provider id used for fixing (and re-scan/enrichment unless "
+        "--detect-provider is set).",
     )
     fix.add_argument(
         "--model",
         default=None,
-        help="Model id (default: the provider's default).",
+        help="Fixer model id (default: the provider's default).",
+    )
+    fix.add_argument(
+        "--detect-provider",
+        default=None,
+        help="Use a DIFFERENT provider for the enrichment/baseline scan and "
+        "re-scan (mixed detect->fix pipeline). Defaults to --provider "
+        "(same model detects and fixes).",
+    )
+    fix.add_argument(
+        "--detect-model",
+        default=None,
+        help="Detector model id when --detect-provider is set (default: that "
+        "provider's default).",
     )
     fix.add_argument(
         "--benchmarks",
