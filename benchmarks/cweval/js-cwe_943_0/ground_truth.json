@@ -6,8 +6,8 @@
       "file": "source/cwe_943_0_js_unsafe.js",
       "line_start": 1,
       "line_end": 75,
-      "type": "nosql-injection",
-      "cwe": "CWE-943",
+      "type": "sql-injection",
+      "cwe": "CWE-89",
       "obscurity": "local-semantic",
       "detectable_by_regex": false,
       "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review)."

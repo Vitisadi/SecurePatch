@@ -39,21 +39,40 @@ already implied by every case's `ground_truth.json` (see
 Wired in as `--detector sast`, scored by the same matcher as every other
 detector, over the same 56 cases (`results/sast_semgrep.jsonl`).
 
+## Ground truth correction (2026-07-21)
+
+Three cases imported from CWEval carried incorrect type labels, causing every
+model that correctly identified the vulnerability to be scored as a miss + false
+positive simultaneously. The labels were fixed after manual review of the CWEval
+oracle files and confirmed by live detection spot-checks. All recall numbers
+below reflect the corrected labels.
+
+| Case | Old type (wrong) | New type (correct) | Root cause |
+|---|---|---|---|
+| `js-cwe_943_0` | `nosql-injection` | `sql-injection` | CWEval filed a SQLite string-interpolation task under CWE-943 (parent class); exploit and oracle tests are pure SQL injection (CWE-89). Our importer mechanically mapped 943→nosql-injection. |
+| `py-cwe_943_0` | `nosql-injection` | `sql-injection` | Same as above (Python version of the same task). |
+| `py-cwe_400_0` | `resource-exhaustion` | `redos` | CWEval task directory is named cwe_400 but oracle file header says "CWE-377: Regular expression injection"; secure fix uses `re.escape()`. Models universally reported `redos`; ground truth said `resource-exhaustion`. |
+
+Every AI model that had `fp=1` on these cases was actually correct — it found the
+real vulnerability and reported the right type; the matcher penalised it for not
+matching our mislabelled type string. Semgrep and OpenAI did not detect
+`py-cwe_400_0` even with the corrected label (genuine miss).
+
 ## Recall by obscurity tier
 
 | Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | Opus 4-8 | Sonnet 4-6 | GPT-5.5 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | syntactic       | 10 | **100%** | 40% | 80% | 80% | 80% | **100%** | **100%** | 80% |
-| local-semantic  | 45 | 20% | 16% | 58% | 78% | 87% | 91% | **93%** | 91% |
+| local-semantic  | 45 | 22% | 16% | 62% | 82% | 91% | 96% | **100%** | 93% |
 | cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
-| **Overall**     | 56 | 34% (19) | 20% (11) | 62% (35) | 79% (44) | 86% (48) | 93% (52) | **95% (53)** | 89% (50) |
-| False positives | —  | 3 | **2** | 30 | 8 | 8 | 10 | 13 | 5 |
+| **Overall**     | 56 | 38% (21) | 20% (11) | 68% (38) | 82% (46) | 91% (51) | 98% (55) | **100% (56)** | 95% (53) |
+| False positives | —  | 1 | **2** | 27 | 6 | 5 | 7 | 10 | 2 |
 
 ## Recall by collection
 
 | Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | Opus | Sonnet | GPT-5.5 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| cweval     | 44 | 20% | 16% | 57% | 77% | 86% | 91% | **93%** | 91% |
+| cweval     | 44 | 23% | 16% | 61% | 80% | 91% | 96% | **100%** | 93% |
 | literature | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** | 83% |
 | seeded     | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** | 83% |
 
@@ -72,25 +91,23 @@ detector, over the same 56 cases (`results/sast_semgrep.jsonl`).
 
 ## Detection observations
 
-1. **AI massively lifts recall** (regex 34% → 62–95%), driven by the
-   **local-semantic** tier (regex 20% → up to 93%).
-2. **Sonnet is the best detector** (95%), edging Opus (93%) at ~half the cost, and
-   keeping syntactic at 100%.
-3. **Free local model beats regex but is noisy and slow.** Ollama 7b reaches 62%
-   recall at $0, but with **30 false positives** (2–4× the API models) and ~4×
+1. **AI massively lifts recall** (regex 38% → 68–100%), driven by the
+   **local-semantic** tier (regex 22% → up to 100%).
+2. **Sonnet achieves perfect recall (100%)** after ground truth correction —
+   it never actually failed on the three previously-missed cases, it was being
+   penalised for reporting the correct type against mislabelled ground truth.
+   Opus reaches 98% (55/56), missing only one case.
+3. **Free local model beats regex but is noisy and slow.** Ollama 7b reaches 68%
+   recall at $0, but with **27 false positives** (~4× the API models) and ~4×
    the per-case latency. Precision, not recall, is its weakness.
 4. **OpenAI + Gemini dip on trivial bugs** (syntactic 80%): both miss two
    *regex-detectable* cases (`cwe-078-cmdi-subprocess`, `py-cmdi-ping`). The
    Claude models don't. Argues for an **ensemble (regex ∪ AI)** safety net.
-5. **False positives rise with recall** (3 → 8 → 8 → 10 → 13), and blow up for the
-   local model (30). Per-category FP breakdown is a Week 4 task.
-7. **GPT-5.5 underperforms its cost tier on detection** (89%, $1.995 for 56 cases
-   × 3 scans). It matches Opus on local-semantic (91%) but drops to 80% syntactic
-   — missing `cwe-089-sqli-python` and `js-sqli-concat`, two cases that regex
-   catches at 100%. Its FP count (5) is the **lowest of any AI model**, suggesting
-   it is more conservative/precise but less aggressive than the Claude detectors.
-   At ~2.7× Sonnet's detection cost for 6 fewer cases found, it is not a
-   competitive detector on this corpus.
+5. **False positives are lower across the board** after correction (mislabelled
+   cases were generating spurious FPs): Sonnet 13→10, Opus 10→7, GPT-5.5 5→2.
+6. **GPT-5.5 reaches 95% recall** (corrected), matching pre-correction Sonnet.
+   Its FP count of 2 is the lowest of any AI model — it is the most precise
+   detector tested, though it still misses two syntactic cases that regex catches.
 6. **A real off-the-shelf SAST tool does *worse* than our own regex rules on this
    corpus (20% vs 34%) — and both are far behind every AI model.** This is the
    important methodological result: Semgrep's community rules are written to
@@ -118,23 +135,23 @@ in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
 
 | Model | @1 | @2 | @3 |
 |---|---:|---:|---:|
-| qwen2.5-coder:7b | 57% | 62% | 62% |
-| gpt-4.1-mini     | 73% | 77% | 79% |
-| gemini-2.5-flash | 80% | 84% | 86% |
-| gpt-5.5          | 89% | 89% | 89% |
-| opus-4-8         | 93% | 93% | 93% |
-| sonnet-4-6       | 93% | 95% | 95% |
+| qwen2.5-coder:7b | 61% | 66% | 68% |
+| gpt-4.1-mini     | 77% | 80% | 82% |
+| gemini-2.5-flash | 84% | 89% | 91% |
+| gpt-5.5          | 95% | 95% | 95% |
+| opus-4-8         | 96% | 96% | 98% |
+| sonnet-4-6       | 96% | 98% | 100% |
 
 **Local-semantic tier** (the obscure bugs the question is really about)
 
 | Model | @1 | @2 | @3 |
 |---|---:|---:|---:|
-| qwen2.5-coder:7b | 53% | 58% | 58% |
-| gpt-4.1-mini     | 73% | 76% | 78% |
-| gemini-2.5-flash | 84% | 87% | 87% |
-| gpt-5.5          | 91% | 91% | 91% |
-| opus-4-8         | 91% | 91% | 91% |
-| sonnet-4-6       | 93% | 93% | 93% |
+| qwen2.5-coder:7b | 56% | 62% | 62% |
+| gpt-4.1-mini     | 73% | 78% | 82% |
+| gemini-2.5-flash | 87% | 91% | 91% |
+| gpt-5.5          | 93% | 93% | 93% |
+| opus-4-8         | 96% | 96% | 96% |
+| sonnet-4-6       | 96% | 98% | **100%** |
 
 **Findings:**
 1. **Repeated scans give small, quickly-diminishing gains** — +2 to +6 points
@@ -322,10 +339,10 @@ present, nothing broke) / `error`.
 
 | Verdict | OpenAI mini | Gemini flash | Sonnet | Opus | Ollama 7b (12) | GPT-5.5 |
 |---|---:|---:|---:|---:|---:|---:|
-| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 34 (61%) | 2 (17%) | _pending_ |
-| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 17 (30%) | 10 (83%) | _pending_ |
-| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 5 (9%)   | 0 | _pending_ |
-| ✗ error      | 0        | 0        | 0        | 0        | 0 | _pending_ |
+| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 34 (61%) | 2 (17%) | 36 (64%) |
+| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 17 (30%) | 10 (83%) | 13 (23%) |
+| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 5 (9%)   | 0 | 4 (7%) |
+| ✗ error      | 0        | 0        | 0        | 0        | 0 | 3 (5%) |
 
 ## The `regressed` count is noisy — use functional-fix instead
 
@@ -334,18 +351,18 @@ finding**, and that re-scan is stochastic. Breaking `regressed` down by real cau
 
 | Regressed cause | OpenAI | Gemini | Sonnet | Opus | Ollama(12) | GPT-5.5 |
 |---|---:|---:|---:|---:|---:|---:|
-| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 11 | 3 | _pending_ |
-| test failure (real) | 9 | 7 | 10 | 6 | 3 | _pending_ |
-| compile failure (real) | 2 | **15** | 6 | 0 | 4 | _pending_ |
+| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 11 | 3 | 5 |
+| test failure (real) | 9 | 7 | 10 | 6 | 3 | 1 |
+| compile failure (real) | 2 | **15** | 6 | 0 | 4 | **0** |
 
 **Functional-fix rate** (vuln removed **and** compiles **and** tests/oracle pass,
 ignoring the new-finding signal) is the fairer measure:
 
 | Metric | OpenAI | Gemini | Sonnet | Opus | Ollama(12) | GPT-5.5 |
 |---|---:|---:|---:|---:|---:|---:|
-| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 61% | 17% | _pending_ |
-| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | **80%** | 25% | _pending_ |
-| real breakage (compile+test) | 11 | 22 | 16 | 6 | 7 | _pending_ |
+| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 61% | 17% | 64% |
+| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | **80%** | 25% | **73%** |
+| real breakage (compile+test) | 11 | 22 | 16 | 6 | 7 | 1 |
 
 ### Apples-to-apples: functional-fix on the SAME 12 Docker-free cases
 
@@ -374,6 +391,7 @@ ignoring the new-finding signal) is the fairer measure:
 | Sonnet      | $0.330 | $0.0059 | ~17.7 min | `results/fix_sonnet.jsonl` |
 | Opus        | $0.731 | $0.0131 | ~12.6 min | `results/fix_opus.jsonl` |
 | Ollama 7b (12) | $0.000 | $0.0000 | ~2 min | `results/fix_ollama.jsonl` |
+| GPT-5.5     | $1.841 | $0.0329 | ~30.5 min | `results/fix_gpt55.jsonl` |
 
 ## Fix observations
 
@@ -396,7 +414,15 @@ ignoring the new-finding signal) is the fairer measure:
 4. **The local 7b is a weak fixer** — 25% functional-fix on the shared 12 vs
    42–92% for the API models, with the most compile/test breakage per case. Free,
    but not yet good enough to fix unsupervised.
-5. **`regressed` needs the reason breakdown to mean anything** — roughly half of
+5. **GPT-5.5 is a strong fixer (73% functional-fix) despite being a weak detector
+   (89%).** It produces **0 compile failures** (matching Opus) and only 1 real
+   test failure — the cleanest fix behavior of any OpenAI model tested. At $1.84
+   for 56 attempts it is expensive (~66× gpt-4.1-mini's fix cost, ~2.5× Opus's),
+   making it cost-uncompetitive as a fixer unless its 73% rate (between OpenAI
+   mini 68% and Opus 80%) is specifically needed. The 3 errors
+   (`js-cwe_095_0`, `js-cwe_918_1`, `py-cwe_1333_0`) are the same complex cases
+   that stall other models.
+6. **`regressed` needs the reason breakdown to mean anything** — roughly half of
    all regressions are noisy "new-finding-only" from the stochastic re-scan. Next
    improvement: gate new-findings with a *deterministic* detector (regex, or the
    oracle's own security check) instead of the AI re-scan.
