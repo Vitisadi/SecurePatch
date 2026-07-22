@@ -41,21 +41,21 @@ detector, over the same 56 cases (`results/sast_semgrep.jsonl`).
 
 ## Recall by obscurity tier
 
-| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | Opus 4-8 | Sonnet 4-6 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| syntactic       | 10 | **100%** | 40% | 80% | 80% | 80% | **100%** | **100%** |
-| local-semantic  | 45 | 20% | 16% | 58% | 78% | 87% | 91% | **93%** |
-| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** |
-| **Overall**     | 56 | 34% (19) | 20% (11) | 62% (35) | 79% (44) | 86% (48) | 93% (52) | **95% (53)** |
-| False positives | —  | 3 | **2** | 30 | 8 | 8 | 10 | 13 |
+| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | Opus 4-8 | Sonnet 4-6 | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| syntactic       | 10 | **100%** | 40% | 80% | 80% | 80% | **100%** | **100%** | 80% |
+| local-semantic  | 45 | 20% | 16% | 58% | 78% | 87% | 91% | **93%** | 91% |
+| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
+| **Overall**     | 56 | 34% (19) | 20% (11) | 62% (35) | 79% (44) | 86% (48) | 93% (52) | **95% (53)** | 89% (50) |
+| False positives | —  | 3 | **2** | 30 | 8 | 8 | 10 | 13 | 5 |
 
 ## Recall by collection
 
-| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | Opus | Sonnet |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| cweval     | 44 | 20% | 16% | 57% | 77% | 86% | 91% | **93%** |
-| literature | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** |
-| seeded     | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** |
+| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | Opus | Sonnet | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| cweval     | 44 | 20% | 16% | 57% | 77% | 86% | 91% | **93%** | 91% |
+| literature | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** | 83% |
+| seeded     | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** | 83% |
 
 ## Detection cost & time
 
@@ -68,6 +68,7 @@ detector, over the same 56 cases (`results/sast_semgrep.jsonl`).
 | Gemini flash | $0.085 | $0.0015 | ~15.7 min| |
 | Sonnet       | $0.747 | $0.0133 | ~12.5 min| |
 | Opus         | $1.380 | $0.0246 | ~9.7 min | |
+| GPT-5.5      | $1.995 | $0.0356 | ~17.9 min| `results/openai_gpt55_detect.jsonl` |
 
 ## Detection observations
 
@@ -83,6 +84,13 @@ detector, over the same 56 cases (`results/sast_semgrep.jsonl`).
    Claude models don't. Argues for an **ensemble (regex ∪ AI)** safety net.
 5. **False positives rise with recall** (3 → 8 → 8 → 10 → 13), and blow up for the
    local model (30). Per-category FP breakdown is a Week 4 task.
+7. **GPT-5.5 underperforms its cost tier on detection** (89%, $1.995 for 56 cases
+   × 3 scans). It matches Opus on local-semantic (91%) but drops to 80% syntactic
+   — missing `cwe-089-sqli-python` and `js-sqli-concat`, two cases that regex
+   catches at 100%. Its FP count (5) is the **lowest of any AI model**, suggesting
+   it is more conservative/precise but less aggressive than the Claude detectors.
+   At ~2.7× Sonnet's detection cost for 6 fewer cases found, it is not a
+   competitive detector on this corpus.
 6. **A real off-the-shelf SAST tool does *worse* than our own regex rules on this
    corpus (20% vs 34%) — and both are far behind every AI model.** This is the
    important methodological result: Semgrep's community rules are written to
@@ -113,6 +121,7 @@ in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
 | qwen2.5-coder:7b | 57% | 62% | 62% |
 | gpt-4.1-mini     | 73% | 77% | 79% |
 | gemini-2.5-flash | 80% | 84% | 86% |
+| gpt-5.5          | 89% | 89% | 89% |
 | opus-4-8         | 93% | 93% | 93% |
 | sonnet-4-6       | 93% | 95% | 95% |
 
@@ -123,6 +132,7 @@ in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
 | qwen2.5-coder:7b | 53% | 58% | 58% |
 | gpt-4.1-mini     | 73% | 76% | 78% |
 | gemini-2.5-flash | 84% | 87% | 87% |
+| gpt-5.5          | 91% | 91% | 91% |
 | opus-4-8         | 91% | 91% | 91% |
 | sonnet-4-6       | 93% | 93% | 93% |
 
@@ -310,32 +320,32 @@ present, nothing broke) / `error`.
 
 ## Verdict distribution (full 56 cases; Ollama = 12)
 
-| Verdict | OpenAI mini | Gemini flash | Sonnet | Opus | Ollama 7b (12) |
-|---|---:|---:|---:|---:|---:|
-| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 34 (61%) | 2 (17%) |
-| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 17 (30%) | 10 (83%) |
-| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 5 (9%)   | 0 |
-| ✗ error      | 0        | 0        | 0        | 0        | 0 |
+| Verdict | OpenAI mini | Gemini flash | Sonnet | Opus | Ollama 7b (12) | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|
+| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 34 (61%) | 2 (17%) | _pending_ |
+| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 17 (30%) | 10 (83%) | _pending_ |
+| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 5 (9%)   | 0 | _pending_ |
+| ✗ error      | 0        | 0        | 0        | 0        | 0 | _pending_ |
 
 ## The `regressed` count is noisy — use functional-fix instead
 
 The strict `fixed` verdict marks a fix regressed if the **AI re-scan flags any new
 finding**, and that re-scan is stochastic. Breaking `regressed` down by real cause:
 
-| Regressed cause | OpenAI | Gemini | Sonnet | Opus | Ollama(12) |
-|---|---:|---:|---:|---:|---:|
-| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 11 | 3 |
-| test failure (real) | 9 | 7 | 10 | 6 | 3 |
-| compile failure (real) | 2 | **15** | 6 | 0 | 4 |
+| Regressed cause | OpenAI | Gemini | Sonnet | Opus | Ollama(12) | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|
+| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 11 | 3 | _pending_ |
+| test failure (real) | 9 | 7 | 10 | 6 | 3 | _pending_ |
+| compile failure (real) | 2 | **15** | 6 | 0 | 4 | _pending_ |
 
 **Functional-fix rate** (vuln removed **and** compiles **and** tests/oracle pass,
 ignoring the new-finding signal) is the fairer measure:
 
-| Metric | OpenAI | Gemini | Sonnet | Opus | Ollama(12) |
-|---|---:|---:|---:|---:|---:|
-| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 61% | 17% |
-| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | **80%** | 25% |
-| real breakage (compile+test) | 11 | 22 | 16 | 6 | 7 |
+| Metric | OpenAI | Gemini | Sonnet | Opus | Ollama(12) | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|
+| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 61% | 17% | _pending_ |
+| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | **80%** | 25% | _pending_ |
+| real breakage (compile+test) | 11 | 22 | 16 | 6 | 7 | _pending_ |
 
 ### Apples-to-apples: functional-fix on the SAME 12 Docker-free cases
 
@@ -516,6 +526,12 @@ python -m securepatch_bench fix --provider anthropic --model claude-opus-4-8 \
 python -m securepatch_bench fix --provider openai --model gpt-4.1-mini \
     --detect-provider anthropic --detect-model claude-sonnet-4-6 \
     --record results/fix_mixed_sonnetdetect_openaifix.jsonl
+
+# --- GPT-5.5 (detection + fix) ---
+python -m securepatch_bench bench --detector ai --provider openai --model gpt-5.5 \
+    --scans 3 --record results/openai_gpt55_detect.jsonl
+python -m securepatch_bench fix --provider openai --model gpt-5.5 \
+    --record results/fix_gpt55.jsonl
 ```
 
 > Update this file whenever a run is re-executed — keep the date/cost/verdict

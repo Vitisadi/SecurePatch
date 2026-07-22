@@ -50,7 +50,9 @@ class OpenAIProvider(ModelProvider):
             "response_format": {"type": "json_object"},
         }
         if request.max_output_tokens:
-            kwargs["max_tokens"] = request.max_output_tokens
+            # GPT-5+ uses max_completion_tokens; older models use max_tokens.
+            # max_completion_tokens is accepted by both, so use it universally.
+            kwargs["max_completion_tokens"] = request.max_output_tokens
         if request.temperature is not None:
             kwargs["temperature"] = request.temperature
 

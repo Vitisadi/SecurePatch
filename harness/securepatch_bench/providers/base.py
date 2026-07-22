@@ -71,6 +71,12 @@ class ModelProvider(ABC):
 # gpt-4.1 / gpt-4o pricing. Approximate; update when vendors change pricing.
 PRICING: dict[str, tuple[float, float]] = {
     # OpenAI
+    "gpt-5.5": (5.00, 30.00),
+    "gpt-5.4": (2.50, 15.00),
+    "gpt-5.1": (1.25, 10.00),
+    "gpt-5-mini": (0.125, 1.00),
+    "gpt-5": (15.00, 60.00),
+    "gpt-4.5": (75.00, 150.00),
     "gpt-4.1-nano": (0.10, 0.40),
     "gpt-4.1-mini": (0.40, 1.60),
     "gpt-4.1": (2.00, 8.00),
