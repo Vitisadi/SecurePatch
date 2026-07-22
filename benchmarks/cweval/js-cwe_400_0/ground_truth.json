@@ -6,11 +6,11 @@
       "file": "source/cwe_400_0_js_unsafe.js",
       "line_start": 1,
       "line_end": 18,
-      "type": "resource-exhaustion",
-      "cwe": "CWE-400",
+      "type": "redos",
+      "cwe": "CWE-1333",
       "obscurity": "local-semantic",
       "detectable_by_regex": false,
-      "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review)."
+      "description": "Vulnerability confirmed by CWEval's security oracle; line range spans the source (approximate; needs_review). CWEval filed under CWE-400 but oracle header says CWE-377: Regular expression injection; security tests use catastrophic-backtracking ReDoS payloads."
     }
   ]
 }

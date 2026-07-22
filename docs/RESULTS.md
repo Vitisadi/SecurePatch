@@ -57,29 +57,30 @@ below reflect the corrected labels.
 | `js-cwe_943_0` | `nosql-injection` | `sql-injection` | CWEval filed a SQLite string-interpolation task under CWE-943 (parent class); exploit and oracle tests are pure SQL injection (CWE-89). Our importer mechanically mapped 943→nosql-injection. |
 | `py-cwe_943_0` | `nosql-injection` | `sql-injection` | Same as above (Python version of the same task). |
 | `py-cwe_400_0` | `resource-exhaustion` | `redos` | CWEval task directory is named cwe_400 but oracle file header says "CWE-377: Regular expression injection"; secure fix uses `re.escape()`. Models universally reported `redos`; ground truth said `resource-exhaustion`. |
+| `js-cwe_400_0` | `resource-exhaustion` | `redos` | JavaScript version of the same cwe_400 task. Same oracle, same CWE-377 header, same ReDoS payloads (`^(a+)+$`). Discovered when ensemble showed it as the sole bug no model could detect — every cloud model had `fp=1, miss=1`, the same signature as the other mislabeled cases. |
 
 Every AI model that had `fp=1` on these cases was actually correct — it found the
 real vulnerability and reported the right type; the matcher penalised it for not
-matching our mislabelled type string. Semgrep and OpenAI did not detect
-`py-cwe_400_0` even with the corrected label (genuine miss).
+matching our mislabelled type string. Regex and Semgrep did not detect either
+`cwe_400_0` case even with the corrected label (genuine miss — they don't pattern-match ReDoS).
 
 ## Recall by obscurity tier
 
 | Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | GPT-5.5 | Opus 4-8 | Sonnet 4-6 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| syntactic       | 10 | **100%** | 40% | **100%** | 60% | 80% | 90% | 80% | **100%** |
-| local-semantic  | 45 | 22% | 16% | 64% | 64% | 87% | 93% | 91% | 98% |
-| cross-function  | 1  | 0% | 0% | **100%** | **100%** | 0% | **100%** | **100%** | **100%** |
-| **Overall**     | 56 | 34% (19) | 20% (11) | 71% (40) | 64% (36) | 84% (47) | 93% (52) | 89% (50) | **98% (55)** |
-| False positives | —  | 3 | **2** | 23 | 12 | 11 | **6** | 15 | 16 |
+| syntactic       | 10 | **100%** | 40% | 90% | 70% | 80% | 90% | 80% | **100%** |
+| local-semantic  | 45 | 22% | 16% | 62% | 69% | 93% | 93% | 93% | **100%** |
+| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
+| **Overall**     | 56 | 34% (19) | 20% (11) | 68% (38) | 70% (39) | 91% (51) | 93% (52) | 91% (51) | **100% (56)** |
+| False positives | —  | 3 | **2** | 30 | 7 | 8 | **5** | 14 | 15 |
 
 ## Recall by collection
 
 | Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | GPT-5.5 | Opus | Sonnet |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| cweval     | 44 | 23% | 16% | 64% | 64% | 86% | 93% | 91% | **98%** |
-| literature | 6  | 83% | 33% | **100%** | 67% | 83% | **100%** | 83% | **100%** |
-| seeded     | 6  | 83% | 33% | **100%** | 67% | 67% | 83% | 83% | **100%** |
+| cweval     | 44 | 23% | 16% | 61% | 68% | 93% | 93% | 93% | **100%** |
+| literature | 6  | 83% | 33% | 83% | 83% | 83% | 83% | 83% | **100%** |
+| seeded     | 6  | 83% | 33% | **100%** | 67% | 83% | **100%** | 83% | **100%** |
 
 ## Detection cost & time
 
@@ -96,17 +97,19 @@ matching our mislabelled type string. Semgrep and OpenAI did not detect
 
 ## Detection observations
 
-1. **AI massively lifts recall** (regex 34% → 64–98%), driven by the
-   **local-semantic** tier (regex 22% → up to 98%).
-2. **Sonnet is the best detector (98%)** — 100% syntactic, 98% local-semantic,
-   100% cross-function, and only 1 missed case overall.
-3. **GPT-5.5 is the most precise AI detector** — 93% recall with only 6 FPs,
+1. **AI massively lifts recall** (regex 34% → 68–100%), driven by the
+   **local-semantic** tier (regex 22% → up to 100%).
+2. **Sonnet achieves perfect recall (100%)** across all 56 cases and all 3
+   obscurity tiers. At k=2 it reaches 100% even on cases it misses on scan 1.
+3. **GPT-5.5 is the most precise AI detector** — 93% recall with only 5 FPs,
    fewest of any AI model.
-4. **Ollama 7b achieves 100% on syntactic and cross-function cases but only 64%
-   on local-semantic** — the opposite pattern from gpt-4.1-mini. With 23 FPs it
-   is the noisiest detector. It is free but slow (~10 min locally).
-5. **gpt-4.1-mini (64%) trails Ollama (71%) overall**, making it hard to justify
-   at its price point for detection alone.
+4. **Gemini and Opus tie at 91%**, both strong on local-semantic (93%) and
+   cross-function (100%) but missing 2 syntactic cases each.
+5. **gpt-4.1-mini (70%) and Ollama (68%) are the sub-frontier tier** — both
+   miss many local-semantic cases. Ollama is free; gpt-4.1-mini is cheap but
+   no longer clearly better than the local model on overall recall.
+6. **No bugs are missed by every model** — the previously-reported "hard ceiling"
+   of 3–4 undetected cases was entirely ground truth labeling errors.
 6. **A real off-the-shelf SAST tool does *worse* than our own regex rules on this
    corpus (20% vs 38%) — and both are far behind every AI model.** This is the
    important methodological result: Semgrep's community rules are written to
@@ -134,35 +137,34 @@ in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
 
 | Model | @1 | @2 | @3 |
 |---|---:|---:|---:|
-| gpt-4.1-mini     | 61% | 64% | 64% |
-| gemini-2.5-flash | 79% | 82% | 84% |
+| qwen2.5-coder:7b | 64% | 66% | 68% |
+| gpt-4.1-mini     | 66% | 68% | 70% |
+| gemini-2.5-flash | 84% | 89% | 91% |
 | gpt-5.5          | 84% | 89% | 93% |
-| opus-4-8         | 89% | 89% | 89% |
-| sonnet-4-6       | 98% | 98% | 98% |
+| opus-4-8         | 89% | 91% | 91% |
+| sonnet-4-6       | 98% | **100%** | **100%** |
 
 **Local-semantic tier** (the obscure bugs the question is really about)
 
 | Model | @1 | @2 | @3 |
 |---|---:|---:|---:|
-| gpt-4.1-mini     | 60% | 64% | 64% |
-| gemini-2.5-flash | 80% | 84% | 87% |
-| gpt-5.5          | 84% | 89% | 93% |
-| opus-4-8         | 91% | 91% | 91% |
-| sonnet-4-6       | 98% | 98% | **98%** |
-
-*(Ollama excluded from @k tables — detection@k data unreliable for that run.)*
+| qwen2.5-coder:7b | 60% | 62% | 62% |
+| gpt-4.1-mini     | 69% | 69% | 69% |
+| gemini-2.5-flash | 87% | 91% | 93% |
+| gpt-5.5          | 87% | 91% | 93% |
+| opus-4-8         | 91% | 93% | 93% |
+| sonnet-4-6       | 98% | **100%** | **100%** |
 
 **Findings:**
-1. **Repeated scans give small, quickly-diminishing gains** — up to +9 points for
-   GPT-5.5, and **almost all of it is realized by k=2**. The third scan adds ≈0.
-2. **The gain is a "recover stochastic misses" effect.** The frontier models
-   (Sonnet, Opus) are essentially **flat** — they find a bug on scan 1 or not at
-   all. Only the cheaper models (OpenAI, Gemini, GPT-5.5) claw back a few points
-   with additional scans.
+1. **Repeated scans give small, quickly-diminishing gains** — up to +9 points,
+   and **almost all of it is realized by k=2**. The third scan adds ≈0.
+2. **Sonnet reaches 100% at k=2** — its one @1 miss is recovered on the second
+   scan. All other frontier models are essentially flat (find it on scan 1 or not
+   at all). Only the cheaper models (Ollama, OpenAI, Gemini, GPT-5.5) claw back
+   a few points with additional scans.
 3. **Practical takeaway:** a single scan captures the large majority of what a
-   model can detect; **k=2 is a reasonable budget** for the cheaper models, and
-   there is no evidence that many scans meaningfully surface additional obscure
-   bugs on this corpus.
+   model can detect; **k=2 is a reasonable budget** for the cheaper models and
+   also lets Sonnet reach perfect recall.
 
 ### Temperature — the lever behind the discovery curve
 
@@ -196,41 +198,38 @@ Combining detectors on the *union* of found bugs (reproduce with
 
 | Model | alone | + regex | gain |
 |---|---:|---:|---:|
-| gpt-4.1-mini     | 64% | 75% | +6 |
-| qwen2.5-coder:7b | 71% | 71% | +0 |
-| gemini-2.5-flash | 84% | 88% | +2 |
-| opus-4-8         | 89% | 93% | +2 |
+| qwen2.5-coder:7b | 68% | 70% | +1 |
+| gpt-4.1-mini     | 70% | 77% | +4 |
+| gemini-2.5-flash | 91% | 95% | +2 |
+| opus-4-8         | 91% | 95% | +2 |
 | gpt-5.5          | 93% | 95% | +1 |
-| sonnet-4-6       | 98% | 98% | +0 |
+| sonnet-4-6       | **100%** | **100%** | +0 |
 
 **Union / voting:**
 
 | Ensemble | recall | found |
 |---|---:|---:|
-| best single (Sonnet) | 98% | 55/56 |
-| **all AI models (union)** | **98% (55/56)** | — no gain |
-| all AI + regex (union) | 98% | 55/56 |
-| voting ≥2 detectors | 96% | 54/56 |
-| voting ≥3 detectors | 93% | 52/56 |
+| best single (Sonnet) | **100%** | **56/56** |
+| all AI models (union) | **100%** | **56/56** |
+| all AI + regex (union) | **100%** | **56/56** |
+| voting ≥2 detectors | 100% | 56/56 |
+| voting ≥3 detectors | 95% | 53/56 |
 
-Bugs no detector finds: **1** (`js-cwe_400_0-1`).
+Bugs no detector finds: **0**
 
 **Findings — mostly a negative result, which is the interesting part:**
 1. **Ensembling does NOT improve recall.** The union of all detectors equals
-   the best single model (Sonnet, 55/56). Every bug any detector finds, Sonnet
-   also finds — the detectors are **nested (a strict hierarchy), not
-   complementary**. Only Sonnet has a *unique* catch (1 bug); every other
-   detector's unique count is **0**.
-2. **Only 1 bug is missed by every model** (`js-cwe_400_0-1`), down from the
-   previously-reported "hard ceiling" of 3, which was a ground truth labeling
-   error (see correction table above).
-3. **regex adds meaningful lift only to gpt-4.1-mini (+6pp)** — it catches
-   syntactic cases that the cheaper model drops. For stronger models the gain
-   is minimal (+0 to +2pp) and for Sonnet there is no gain at all.
-4. **Ensembling's real value is precision, not recall.** Requiring ≥2 detectors to
-   agree keeps 96% recall (−2pp) while discarding lone-detector noise — a
-   near-free way to cut false positives (e.g. Ollama's 23). Vote to *raise
-   precision*, don't union to raise recall.
+   the best single model (Sonnet, 56/56 = 100%). Every bug any detector finds,
+   Sonnet also finds — the detectors are **nested (a strict hierarchy), not
+   complementary**. Every detector's unique count is **0**.
+2. **No bugs are missed by every model** — all 4 previously-reported "hard
+   ceiling" misses were ground truth labeling errors (see correction table above).
+3. **regex adds +4pp to gpt-4.1-mini** and +1–2pp to the mid-tier models, but
+   nothing to Sonnet. Ensemble with regex only matters if you're using a
+   sub-frontier model.
+4. **Ensembling's real value is precision, not recall.** Requiring ≥3 detectors
+   to agree keeps 95% recall (−5pp) while discarding lone-detector noise. Vote
+   to *raise precision*, don't union to raise recall.
 
 **Practical takeaway:** for recall, **use the single best model** — do not pay for
 an ensemble. Add regex only under a cheaper model; use voting only to cut FPs.
@@ -251,50 +250,31 @@ combination, not just one:
 
 | Detector → Judge | TP kept | FP before→after | precision | recall | FPs removed | cost |
 |---|---:|---:|---:|---:|---:|---:|
-| OpenAI → OpenAI (self) | 40→37 | 8→8 | 83%→82% | 71%→66% | 0 / 8 | $0.030 |
-| Sonnet → Sonnet (self) | 52→51 | 15→14 | 78%→78% | 93%→91% | 1 / 15 | $0.442 |
-| **Opus → Opus (self)** | 52→49 | 12→12 | 81%→80% | 93%→88% | **0 / 12** | $0.849 |
-| OpenAI → Sonnet | 39→38 | 9→9 | 81%→81% | 70%→68% | 0 / 9 | $0.151 |
-| **OpenAI → Opus** | 41→38 | 9→9 | 82%→81% | 73%→68% | **0 / 9** | $0.309 |
-| **Sonnet → OpenAI** | 52→50 | 14→14 | 79%→78% | 93%→89% | **0 / 14** | $0.268 |
-| **Sonnet → Opus** | 53→51 | 12→12 | 82%→81% | 95%→91% | **0 / 12** | $0.654 |
-| **Opus → Sonnet** | 50→49 | 12→12 | 81%→80% | 89%→88% | **0 / 12** | $0.641 |
-| **Opus → OpenAI** | 50→47 | 10→10 | 83%→82% | 89%→84% | **0 / 10** | $0.471 |
-| **Ollama → Sonnet (weak→strong)** | 31→30 | 26→19 | 54%→61% | 55%→54% | **7 / 26** | $0.172 |
-
-(Bold rows are the 6 combos run for this question; the rest were already on
-record.)
+| OpenAI → OpenAI (self) | 42→41 | 5→5 | 89%→89% | 75%→73% | 0 / 5 | $0.031 |
+| Sonnet → Sonnet (self) | 54→53 | 17→17 | 76%→76% | 96%→95% | 0 / 17 | $0.468 |
+| Opus → Opus (self) | 51→50 | 14→14 | 78%→78% | 91%→89% | 0 / 14 | $0.875 |
+| Sonnet → OpenAI | 55→53 | 16→16 | 77%→77% | 98%→95% | 0 / 16 | $0.273 |
+| Sonnet → Opus | 55→53 | 17→16 | 76%→77% | 98%→95% | 1 / 17 | $0.722 |
+| **Ollama → Sonnet (weak→strong)** | 35→34 | 26→18 | 57%→65% | 62%→61% | **8 / 26** | $0.193 |
 
 **Findings:**
-1. **The result generalizes cleanly: no pairing among the three strong models
-   (Sonnet, Opus, gpt-4.1-mini) removes false positives — self or cross.** All
-   9 strong-model cells remove **0 or at most 1** of 8–15 FPs, regardless of
-   which model detects and which judges. This isn't a self-verification quirk;
-   it's a property of the *capability tier*, not the specific model pairing.
-   Every strong-model combination *does*, however, cost 1–4 real bugs (recall
-   drops 2–5 points every time) — so cross-judging among strong models is
-   **strictly worse than doing nothing**: zero precision gain, guaranteed
-   recall loss.
-2. **This reinforces, not contradicts, the earlier explanation:** a capable
-   detector's "false positives" are mostly plausible real-but-unlabeled
-   findings (extra genuine issues beyond the one labeled bug per case), which
-   *any* competent judge correctly keeps — Opus doesn't reject Sonnet's extra
-   findings any more than Sonnet rejects its own, because from the judge's
-   point of view those findings look real. The matcher's FP count reflects
-   **incomplete ground truth**, not model noise, so no judge (of any identity)
-   can fix it.
-3. **The weak→strong pair remains the only one that works** — Sonnet removes
-   7/26 (27%) of Ollama's FPs for +7 pts precision at only −1 pt recall. The
-   determining factor is a genuine **capability gap**, not "is it a different
-   model": Opus judging Sonnet (both frontier) behaves just like Sonnet judging
-   Sonnet (self); only Ollama (a real, weaker tier) has junk a stronger judge
-   can actually catch.
-4. **Consistent ~1–4-bug recall tax scales with judge activity:** every judged
-   pass loses at least one real bug (a single-finding view can't trace taint to
-   its source), and the strong-model cross pairs lose *more* (2–5 bugs) than
-   self-judging typically did (1–3) — mixing models doesn't buy safety, it just
-   adds i.i.d.-ish judgment noise on top of the same "real bug looks rejectable
-   in isolation" failure mode.
+1. **No pairing among the three strong models removes false positives — self or
+   cross.** All 5 strong-model cells remove 0–1 of 5–17 FPs, regardless of which
+   model detects and which judges. Every combination does, however, cost 1–2 real
+   bugs (recall drops 2–3pp every time) — cross-judging among strong models is
+   **strictly worse than doing nothing**: zero precision gain, guaranteed recall
+   loss.
+2. **A capable detector's "false positives" are mostly real-but-unlabeled
+   findings** that any competent judge correctly keeps. The matcher's FP count
+   reflects **incomplete ground truth**, not model noise — no judge can fix it.
+3. **The weak→strong pair is the only one that works** — Sonnet removes 8/26
+   (31%) of Ollama's FPs for +8 pts precision at only −1 pt recall. The
+   determining factor is a genuine **capability gap**: Opus judging Sonnet (both
+   frontier) behaves just like Sonnet judging Sonnet (self); only Ollama (a real,
+   weaker tier) has junk a stronger judge can actually catch.
+4. **Every judged pass loses at least 1 real bug** — a single-finding view can't
+   trace taint to its source, so some genuine findings look rejectable in
+   isolation.
 
 **Design answer — what to do:**
 - **Same model: no.** Self-verification is useless (correlated errors).
@@ -304,7 +284,7 @@ record.)
   There is no "best pairing" among strong models; they're all equally useless.
 - **Different, *stronger*-tier model as judge: yes — but only across a genuine
   capability gap.** The "detect cheap/local, verify with a frontier model"
-  recipe cuts a weak detector's FPs (Ollama +7 pts precision). For any
+  recipe cuts a weak detector's FPs (Ollama +8 pts precision). For any
   frontier detector, verification by another frontier model adds nothing.
 - **Never a weaker judge** (it would reject true findings, per the ensemble
   hierarchy).
