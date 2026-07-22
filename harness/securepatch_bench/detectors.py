@@ -87,14 +87,14 @@ SAST_CWE_TO_TYPE = {
     "338": "weak-randomness",
     "347": "improper-signature-verification",
     "377": "insecure-temp-file",
-    "400": "resource-exhaustion",
+    "400": "redos",  # CWEval cwe_400_0 is regex injection/ReDoS; kept for Semgrep CWE-400 mapping consistency
     "502": "deserialization",
     "643": "xpath-injection",
     "732": "incorrect-permissions",
     "760": "weak-cryptography",
     "798": "hardcoded-secret",
     "918": "ssrf",
-    "943": "nosql-injection",
+    "943": "sql-injection",  # CWEval cwe_943_0 is SQL injection; CWEval filed under CWE-943 (parent class)
     "1333": "redos",
 }
 

@@ -48,13 +48,13 @@ CWE_TYPE = {
     329: "weak-cryptography",
     347: "improper-signature-verification",
     377: "insecure-temp-file",
-    400: "resource-exhaustion",
+    400: "redos",  # CWEval cwe_400_0 is regex injection/ReDoS (CWE-1333), not generic resource exhaustion — oracle confirms re.escape() fix
     502: "deserialization",
     643: "xpath-injection",
     732: "incorrect-permissions",
     760: "weak-cryptography",
     918: "ssrf",
-    943: "nosql-injection",
+    943: "sql-injection",  # CWEval cwe_943_0 uses SQLite string interpolation — SQL injection (CWE-89), not NoSQL; CWEval used 943 as parent class
     1333: "redos",
 }
 
