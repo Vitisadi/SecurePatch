@@ -109,28 +109,25 @@ as the sweet spot.
 
 ### 3.2 Detection skill ≠ fixing skill (the headline result)
 
-| Model | Functional-fix rate (full 56) | Functional-fix (shared 12 Docker-free) | Cost (56 cases) |
-|---|---:|---:|---:|
-| Sonnet (best *detector*, **100% recall**) | 62% | 50% | $0.330 |
-| OpenAI `gpt-4.1-mini` (best *cost-adjusted* fixer) | 68% | 67% | $0.028 |
-| Gemini `2.5-flash` | 59% | 42% | $0.047 |
-| GPT-5.5 | 73% | — | $1.841 |
-| **Opus (best fixer overall)** | **80%** | **92%** | $0.731 |
-| Ollama 7b (local) | 25%* | 25% | $0.000 |
+| Model | Functional-fix (full 56) | Functional-fix (shared 12) | Real breakage | Cost |
+|---|---:|---:|---:|---:|
+| Sonnet (best *detector*, **100% recall**) | 69% (39/56) | 50% | 16 | $0.330 |
+| Gemini `2.5-flash` | 64% (36/56) | 42% | 22 | $0.047 |
+| OpenAI `gpt-4.1-mini` | 73% (41/56) | 67% | 11 | $0.028 |
+| GPT-5.5 | 75% (42/56) | — | **1** | $1.841 |
+| **Opus (best fixer overall)** | **80% (45/56)** | **92%** | 6 | $0.731 |
+| Ollama 7b (local, 12 cases only†) | 33% (4/12) | 33% | 7 | $0.000 |
 
-*\*Ollama fix numbers are on the 12 Docker-free cases only — Docker + the
-resident local model can't coexist on the test machine (RAM contention).*
+*†Ollama: Docker + resident 7B model can't coexist on test machine (RAM contention); only seeded + literature cases run.*
 
-**Sonnet — the best detector (98%) — is the *weakest Anthropic fixer*** (62%
-functional-fix), while its sibling **Opus is the best fixer of any model
-tested** (80% full-56, 92% on the shared 12), at ~2.2× Sonnet's fix cost and
-**0 compile failures** across all 56 attempts (vs OpenAI 2, Sonnet 6, Gemini
-15). GPT-5.5 lands at 73% functional-fix with 0 compile failures, between
-gpt-4.1-mini and Opus, but at ~66× gpt-4.1-mini's cost. So the "detect ≠ fix"
-gap is real *within a model family* — but it isn't a small-model-wins story
-once Opus is in the comparison: raw capability still dominates when cost isn't
-the constraint. `gpt-4.1-mini` remains the best **cost-adjusted** fixer — 68%
-at roughly 1/26 of Opus's cost.
+**Sonnet — the best detector (100%) — is mid-pack as a fixer (69%)**, while its
+sibling **Opus is the best fixer** (80% full-56, 92% on the shared 12). **GPT-5.5
+has the fewest real breakages (1/56)** — the cleanest patches of any model — but
+at $1.841 for 56 cases (~66× mini's cost) it sits only between mini and Opus in
+functional-fix rate (75%), making it cost-uncompetitive. **`gpt-4.1-mini` is the
+best cost-adjusted fixer** — 73% at ~$0.0005/attempt vs Opus's $0.0131 (26× cheaper
+for 7 fewer points). **Ollama is a poor fixer** — 33% on the easy 12-case slice
+with 7 real breakages, not reliable unsupervised.
 
 ### 3.3 Ensembling / voting — a clean negative result
 

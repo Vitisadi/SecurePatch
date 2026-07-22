@@ -400,11 +400,12 @@ finding**, and that re-scan is stochastic. Breaking `regressed` down by real cau
 **Functional-fix rate** (vuln removed **and** compiles **and** tests/oracle pass,
 ignoring the new-finding signal) is the fairer measure:
 
-| Metric | OpenAI | Gemini | Sonnet | Opus | Ollama(12) | GPT-5.5 |
+| Metric | OpenAI mini | Gemini | Sonnet | Opus | GPT-5.5 | Ollama (12) |
 |---|---:|---:|---:|---:|---:|---:|
-| strict `fixed` (full 56 / Ollama 12) | 48% | 45% | 34% | 61% | 17% | 64% |
-| **functional-fix** (full 56 / Ollama 12) | **68%** | 59% | 62% | **80%** | 25% | **73%** |
-| real breakage (compile+test) | 11 | 22 | 16 | 6 | 7 | 1 |
+| strict `fixed` | 27/56 (48%) | 25/56 (45%) | 19/56 (34%) | 34/56 (61%) | 36/56 (64%) | 2/12 (17%) |
+| **functional-fix** | 41/56 (73%) | 36/56 (64%) | 39/56 (69%) | **45/56 (80%)** | 42/56 (75%) | 4/12 (33%) |
+| real breakage (compile+test) | 11 | 22 | 16 | 6 | **1** | 7 |
+| cost | $0.028 | $0.047 | $0.330 | $0.731 | $1.841 | $0.000 |
 
 ### Apples-to-apples: functional-fix on the SAME 12 Docker-free cases
 
@@ -438,32 +439,23 @@ ignoring the new-finding signal) is the fairer measure:
 ## Fix observations
 
 1. **Detection skill ≠ fixing skill — but frontier scale still wins overall.**
-   Sonnet is the *best detector* (95%) yet the *weakest Anthropic fixer* by
-   functional-fix (62%); its sibling **Opus is the best fixer of any model
-   tested** (80% full-56, **92% on the shared 12**) at ~2.2× Sonnet's fix cost.
-   So the "detect ≠ fix" gap is real *within* a model family (Sonnet's ranking
-   flips between the two tasks), but it is not a small-model-wins story once
-   you compare against Opus: raw capability still dominates once cost is not
-   the deciding constraint. `gpt-4.1-mini` remains the best **cost-adjusted**
-   fixer (67% functional-fix at ~$0.0002/attempt vs Opus's $0.0131 — a ~65×
-   cost gap for 25 fewer points).
-2. **Opus is also the "cleanest" fixer** — 0 compile failures across all 56
-   attempts (vs OpenAI 2, Sonnet 6, Gemini 15), and only 6 real test failures.
-   Its regressions are almost entirely the noisy new-finding-only kind (11/17).
-3. **Gemini breaks compilation the most** — 15 of its 31 regressions are compile
-   failures (vs OpenAI 2, Sonnet 6, Opus 0). Its whole-file rewrites more often
-   emit code that doesn't parse.
-4. **The local 7b is a weak fixer** — 25% functional-fix on the shared 12 vs
-   42–92% for the API models, with the most compile/test breakage per case. Free,
-   but not yet good enough to fix unsupervised.
-5. **GPT-5.5 is a strong fixer (73% functional-fix) despite being a weak detector
-   (89%).** It produces **0 compile failures** (matching Opus) and only 1 real
-   test failure — the cleanest fix behavior of any OpenAI model tested. At $1.84
-   for 56 attempts it is expensive (~66× gpt-4.1-mini's fix cost, ~2.5× Opus's),
-   making it cost-uncompetitive as a fixer unless its 73% rate (between OpenAI
-   mini 68% and Opus 80%) is specifically needed. The 3 errors
-   (`js-cwe_095_0`, `js-cwe_918_1`, `py-cwe_1333_0`) are the same complex cases
-   that stall other models.
+   Sonnet is the *best detector* (100%) yet mid-pack as a fixer (69%); its
+   sibling **Opus is the best fixer** (80% full-56, **92% on the shared 12**) at
+   ~2.2× Sonnet's fix cost. `gpt-4.1-mini` is the best **cost-adjusted** fixer
+   (73% at ~$0.0005/attempt vs Opus's $0.0131 — a ~26× cost gap for 7 fewer
+   points).
+2. **Opus is the cleanest fixer** — only 6 real test failures across 56 attempts
+   and the fewest regressions of any model.
+3. **GPT-5.5 has the fewest real breakages (1/56)** — cleaner patches than any
+   other model, but at $1.841 for 56 cases (~66× mini's cost) it is not
+   cost-competitive given its 75% functional-fix rate sits between mini (73%)
+   and Opus (80%).
+4. **Gemini breaks compilation the most** — 22 real breakages out of 56, the
+   highest of any model. Its whole-file rewrites more often emit code that
+   doesn't parse.
+5. **Ollama is a poor fixer** — 33% functional-fix on the easy 12-case
+   Docker-free slice (seeded + literature), with 7 real breakages out of 12.
+   Free, but not reliable enough to use unsupervised.
 6. **`regressed` needs the reason breakdown to mean anything** — roughly half of
    all regressions are noisy "new-finding-only" from the stochastic re-scan. Next
    improvement: gate new-findings with a *deterministic* detector (regex, or the
