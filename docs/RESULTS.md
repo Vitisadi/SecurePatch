@@ -13,7 +13,12 @@ human-readable summary we keep in version control. See
 
 **Models under test:** regex (baseline), **Semgrep (off-the-shelf SAST baseline)**,
 OpenAI `gpt-4.1-mini`, Google Gemini `2.5-flash`, Anthropic Sonnet `4-6`, Anthropic
-Opus `4-8`, and a local Ollama `qwen2.5-coder:7b` (runs on-machine, $0).
+Opus `4-8`, OpenAI `gpt-5.5`, and a local Ollama `qwen2.5-coder:7b` (runs on-machine, $0).
+
+> **Note on detection prompt (2026-07-21):** All AI detection runs use a generic
+> `code.py` / `code.js` display filename in the prompt. An earlier run used the
+> actual source path (e.g. `cwe_943_0_js_unsafe.js`), which leaked the CWE number
+> to the model. All numbers in this document are from the corrected runs.
 
 ---
 
@@ -60,21 +65,21 @@ matching our mislabelled type string. Semgrep and OpenAI did not detect
 
 ## Recall by obscurity tier
 
-| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | Opus 4-8 | Sonnet 4-6 | GPT-5.5 |
+| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | GPT-5.5 | Opus 4-8 | Sonnet 4-6 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| syntactic       | 10 | **100%** | 40% | 80% | 80% | 80% | **100%** | **100%** | 80% |
-| local-semantic  | 45 | 22% | 16% | 62% | 82% | 91% | 96% | **100%** | 93% |
-| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
-| **Overall**     | 56 | 38% (21) | 20% (11) | 68% (38) | 82% (46) | 91% (51) | 98% (55) | **100% (56)** | 95% (53) |
-| False positives | —  | 1 | **2** | 27 | 6 | 5 | 7 | 10 | 2 |
+| syntactic       | 10 | **100%** | 40% | **100%** | 60% | 80% | 90% | 80% | **100%** |
+| local-semantic  | 45 | 22% | 16% | 64% | 64% | 87% | 93% | 91% | 98% |
+| cross-function  | 1  | 0% | 0% | **100%** | **100%** | 0% | **100%** | **100%** | **100%** |
+| **Overall**     | 56 | 34% (19) | 20% (11) | 71% (40) | 64% (36) | 84% (47) | 93% (52) | 89% (50) | **98% (55)** |
+| False positives | —  | 3 | **2** | 23 | 12 | 11 | **6** | 15 | 16 |
 
 ## Recall by collection
 
-| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | Opus | Sonnet | GPT-5.5 |
+| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | GPT-5.5 | Opus | Sonnet |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| cweval     | 44 | 23% | 16% | 61% | 80% | 91% | 96% | **100%** | 93% |
-| literature | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** | 83% |
-| seeded     | 6  | 83% | 33% | 83% | 83% | 83% | **100%** | **100%** | 83% |
+| cweval     | 44 | 23% | 16% | 64% | 64% | 86% | 93% | 91% | **98%** |
+| literature | 6  | 83% | 33% | **100%** | 67% | 83% | **100%** | 83% | **100%** |
+| seeded     | 6  | 83% | 33% | **100%** | 67% | 67% | 83% | 83% | **100%** |
 
 ## Detection cost & time
 
@@ -82,34 +87,28 @@ matching our mislabelled type string. Semgrep and OpenAI did not detect
 |---|---:|---:|---:|---|
 | regex        | $0.000 | $0.0000 | <1s      | deterministic |
 | Semgrep      | $0.000 | $0.0000 | ~7.9 min | local; ~8.4s/case (per-file process + rule load overhead) |
-| Ollama 7b    | $0.000 | $0.0000 | ~57 min  | local; ~4× slower/case |
-| OpenAI mini  | $0.053 | $0.0009 | ~4.4 min | |
-| Gemini flash | $0.085 | $0.0015 | ~15.7 min| |
-| Sonnet       | $0.747 | $0.0133 | ~12.5 min| |
-| Opus         | $1.380 | $0.0246 | ~9.7 min | |
-| GPT-5.5      | $1.995 | $0.0356 | ~17.9 min| `results/openai_gpt55_detect.jsonl` |
+| Ollama 7b    | $0.000 | $0.0000 | ~10.4 min| local; `results/ollama_detect_v2.jsonl` |
+| OpenAI mini  | $0.051 | $0.0009 | ~4.0 min | `results/openai_detect_v2.jsonl` |
+| Gemini flash | $0.085 | $0.0015 | ~17.2 min| `results/gemini_detect_v2.jsonl` |
+| Sonnet       | $0.756 | $0.0135 | ~12.9 min| `results/sonnet_detect_v2.jsonl` |
+| Opus         | $1.402 | $0.0250 | ~10.2 min| `results/opus_detect_v2.jsonl` |
+| GPT-5.5      | $2.167 | $0.0387 | ~18.3 min| `results/gpt55_detect_v2.jsonl` |
 
 ## Detection observations
 
-1. **AI massively lifts recall** (regex 38% → 68–100%), driven by the
-   **local-semantic** tier (regex 22% → up to 100%).
-2. **Sonnet achieves perfect recall (100%)** after ground truth correction —
-   it never actually failed on the three previously-missed cases, it was being
-   penalised for reporting the correct type against mislabelled ground truth.
-   Opus reaches 98% (55/56), missing only one case.
-3. **Free local model beats regex but is noisy and slow.** Ollama 7b reaches 68%
-   recall at $0, but with **27 false positives** (~4× the API models) and ~4×
-   the per-case latency. Precision, not recall, is its weakness.
-4. **OpenAI + Gemini dip on trivial bugs** (syntactic 80%): both miss two
-   *regex-detectable* cases (`cwe-078-cmdi-subprocess`, `py-cmdi-ping`). The
-   Claude models don't. Argues for an **ensemble (regex ∪ AI)** safety net.
-5. **False positives are lower across the board** after correction (mislabelled
-   cases were generating spurious FPs): Sonnet 13→10, Opus 10→7, GPT-5.5 5→2.
-6. **GPT-5.5 reaches 95% recall** (corrected), matching pre-correction Sonnet.
-   Its FP count of 2 is the lowest of any AI model — it is the most precise
-   detector tested, though it still misses two syntactic cases that regex catches.
+1. **AI massively lifts recall** (regex 34% → 64–98%), driven by the
+   **local-semantic** tier (regex 22% → up to 98%).
+2. **Sonnet is the best detector (98%)** — 100% syntactic, 98% local-semantic,
+   100% cross-function, and only 1 missed case overall.
+3. **GPT-5.5 is the most precise AI detector** — 93% recall with only 6 FPs,
+   fewest of any AI model.
+4. **Ollama 7b achieves 100% on syntactic and cross-function cases but only 64%
+   on local-semantic** — the opposite pattern from gpt-4.1-mini. With 23 FPs it
+   is the noisiest detector. It is free but slow (~10 min locally).
+5. **gpt-4.1-mini (64%) trails Ollama (71%) overall**, making it hard to justify
+   at its price point for detection alone.
 6. **A real off-the-shelf SAST tool does *worse* than our own regex rules on this
-   corpus (20% vs 34%) — and both are far behind every AI model.** This is the
+   corpus (20% vs 38%) — and both are far behind every AI model.** This is the
    important methodological result: Semgrep's community rules are written to
    pattern-match real framework/library call sites (`cursor.execute()`,
    `subprocess.call(shell=True)`, etc.), and a large share of our cases —
@@ -135,36 +134,35 @@ in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
 
 | Model | @1 | @2 | @3 |
 |---|---:|---:|---:|
-| qwen2.5-coder:7b | 61% | 66% | 68% |
-| gpt-4.1-mini     | 77% | 80% | 82% |
-| gemini-2.5-flash | 84% | 89% | 91% |
-| gpt-5.5          | 95% | 95% | 95% |
-| opus-4-8         | 96% | 96% | 98% |
-| sonnet-4-6       | 96% | 98% | 100% |
+| gpt-4.1-mini     | 61% | 64% | 64% |
+| gemini-2.5-flash | 79% | 82% | 84% |
+| gpt-5.5          | 84% | 89% | 93% |
+| opus-4-8         | 89% | 89% | 89% |
+| sonnet-4-6       | 98% | 98% | 98% |
 
 **Local-semantic tier** (the obscure bugs the question is really about)
 
 | Model | @1 | @2 | @3 |
 |---|---:|---:|---:|
-| qwen2.5-coder:7b | 56% | 62% | 62% |
-| gpt-4.1-mini     | 73% | 78% | 82% |
-| gemini-2.5-flash | 87% | 91% | 91% |
-| gpt-5.5          | 93% | 93% | 93% |
-| opus-4-8         | 96% | 96% | 96% |
-| sonnet-4-6       | 96% | 98% | **100%** |
+| gpt-4.1-mini     | 60% | 64% | 64% |
+| gemini-2.5-flash | 80% | 84% | 87% |
+| gpt-5.5          | 84% | 89% | 93% |
+| opus-4-8         | 91% | 91% | 91% |
+| sonnet-4-6       | 98% | 98% | **98%** |
+
+*(Ollama excluded from @k tables — detection@k data unreliable for that run.)*
 
 **Findings:**
-1. **Repeated scans give small, quickly-diminishing gains** — +2 to +6 points
-   overall, and **almost all of it is realized by k=2**. The third scan adds ≈0.
-2. **The gain is a "recover stochastic misses" effect, not a "grind out obscure
-   bugs" effect.** The frontier models (Opus, Sonnet) are essentially **flat** —
-   they find a bug on scan 1 or not at all. Only the weaker/cheaper models
-   (OpenAI, Gemini, Ollama) claw back a few points with a second scan.
+1. **Repeated scans give small, quickly-diminishing gains** — up to +9 points for
+   GPT-5.5, and **almost all of it is realized by k=2**. The third scan adds ≈0.
+2. **The gain is a "recover stochastic misses" effect.** The frontier models
+   (Sonnet, Opus) are essentially **flat** — they find a bug on scan 1 or not at
+   all. Only the cheaper models (OpenAI, Gemini, GPT-5.5) claw back a few points
+   with additional scans.
 3. **Practical takeaway:** a single scan captures the large majority of what a
    model can detect; **k=2 is a reasonable budget** for the cheaper models, and
    there is no evidence that many scans meaningfully surface additional obscure
-   bugs on this corpus. (Cross-function is a single bug, so its 0%→100% jump for
-   Gemini is noise, not signal.)
+   bugs on this corpus.
 
 ### Temperature — the lever behind the discovery curve
 
@@ -198,40 +196,41 @@ Combining detectors on the *union* of found bugs (reproduce with
 
 | Model | alone | + regex | gain |
 |---|---:|---:|---:|
-| qwen2.5-coder:7b | 62% | 66% | +2 |
-| gpt-4.1-mini     | 79% | 82% | +2 |
-| gemini-2.5-flash | 86% | 89% | +2 |
-| opus-4-8         | 93% | 93% | +0 |
-| sonnet-4-6       | 95% | 95% | +0 |
+| gpt-4.1-mini     | 64% | 75% | +6 |
+| qwen2.5-coder:7b | 71% | 71% | +0 |
+| gemini-2.5-flash | 84% | 88% | +2 |
+| opus-4-8         | 89% | 93% | +2 |
+| gpt-5.5          | 93% | 95% | +1 |
+| sonnet-4-6       | 98% | 98% | +0 |
 
 **Union / voting:**
 
-| Ensemble | recall |
-|---|---:|
-| best single (Sonnet) | 95% (53/56) |
-| **all AI models (union)** | **95% (53/56)** |
-| all AI + regex (union) | 95% (53/56) |
-| voting ≥2 detectors | 93% (52/56) |
-| voting ≥3 detectors | 91% (51/56) |
+| Ensemble | recall | found |
+|---|---:|---:|
+| best single (Sonnet) | 98% | 55/56 |
+| **all AI models (union)** | **98% (55/56)** | — no gain |
+| all AI + regex (union) | 98% | 55/56 |
+| voting ≥2 detectors | 96% | 54/56 |
+| voting ≥3 detectors | 93% | 52/56 |
+
+Bugs no detector finds: **1** (`js-cwe_400_0-1`).
 
 **Findings — mostly a negative result, which is the interesting part:**
-1. **Ensembling does NOT improve recall.** The union of all six detectors equals
-   the best single model (Sonnet, 53/56). Every bug any detector finds, Sonnet
+1. **Ensembling does NOT improve recall.** The union of all detectors equals
+   the best single model (Sonnet, 55/56). Every bug any detector finds, Sonnet
    also finds — the detectors are **nested (a strict hierarchy), not
    complementary**. Only Sonnet has a *unique* catch (1 bug); every other
    detector's unique count is **0**.
-2. **A hard ceiling of 3 bugs** is found by *no* detector: `js-cwe_943_0`,
-   `py-cwe_943_0` (NoSQL injection) and `py-cwe_400_0` (resource exhaustion).
-   These need better detection, not more models.
-3. **regex adds a cheap +2** to the *sub-frontier* models (Ollama/OpenAI/Gemini)
-   — the syntactic safety net for the trivial bugs they drop — but nothing to the
-   Claude models. So "ensemble with regex" only matters if you're already using a
-   cheaper model.
+2. **Only 1 bug is missed by every model** (`js-cwe_400_0-1`), down from the
+   previously-reported "hard ceiling" of 3, which was a ground truth labeling
+   error (see correction table above).
+3. **regex adds meaningful lift only to gpt-4.1-mini (+6pp)** — it catches
+   syntactic cases that the cheaper model drops. For stronger models the gain
+   is minimal (+0 to +2pp) and for Sonnet there is no gain at all.
 4. **Ensembling's real value is precision, not recall.** Requiring ≥2 detectors to
-   agree keeps 93% recall (−2 pp) while discarding lone-detector findings — a
-   near-free way to cut false positives (e.g. Ollama's 30). That reframes the
-   "multiple models" question: vote to *raise precision*, don't union to raise
-   recall.
+   agree keeps 96% recall (−2pp) while discarding lone-detector noise — a
+   near-free way to cut false positives (e.g. Ollama's 23). Vote to *raise
+   precision*, don't union to raise recall.
 
 **Practical takeaway:** for recall, **use the single best model** — do not pay for
 an ensemble. Add regex only under a cheaper model; use voting only to cut FPs.

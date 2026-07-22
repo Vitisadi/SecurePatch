@@ -217,7 +217,10 @@ class AIDetector:
         path = Path(source_file)
         language = LANGUAGE_BY_SUFFIX.get(path.suffix.lower(), "unknown")
         code = path.read_text(encoding="utf-8", errors="replace")
-        prompt = build_detection_prompt(language, path.name, code)
+        # Use a generic filename so models cannot infer the CWE/vulnerability
+        # class from the path (e.g. "cwe_943_0_js_unsafe.js" leaks CWE-943).
+        display_name = f"code{path.suffix.lower()}"
+        prompt = build_detection_prompt(language, display_name, code)
 
         request = ModelRequest(
             model=self.model,

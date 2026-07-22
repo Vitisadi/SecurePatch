@@ -76,24 +76,19 @@ Salt), CWE-798 (Hardcoded Credentials), CWE-918 (SSRF), CWE-1333 (ReDoS).
 
 ### 3.1 AI detection crushes rule-based baselines
 
-*All numbers reflect the corrected ground truth labels (see §1 note). Pre-correction
-numbers were: Regex 34%, Semgrep 20%, Ollama 62%, OpenAI 79%, Gemini 86%, Opus 93%,
-Sonnet 95% — the correction adds 2–3 points to every AI model and reveals that
-the previously-reported "hard ceiling" was a measurement artifact, not a model limit.*
-
 | Detector | Overall recall | Syntactic | Local-semantic | Cross-function | False positives |
 |---|---:|---:|---:|---:|---:|
-| Regex (homemade) | 38% (21/56) | 100% | 22% | 0% | 1 |
+| Regex (homemade) | 34% (19/56) | 100% | 22% | 0% | 3 |
 | **Semgrep (off-the-shelf SAST)** | **20% (11/56)** | 40% | 16% | 0% | **2** |
-| Ollama 7b | 68% (38/56) | 80% | 62% | 100% | 27 |
-| OpenAI `gpt-4.1-mini` | 82% (46/56) | 80% | 82% | 100% | 6 |
-| Gemini `2.5-flash` | 91% (51/56) | 80% | 91% | 100% | 5 |
-| GPT-5.5 | 95% (53/56) | 80% | 93% | 100% | **2** |
-| Opus `4-8` | 98% (55/56) | 100% | 96% | 100% | 7 |
-| **Sonnet `4-6` (perfect detector)** | **100% (56/56)** | 100% | 100% | 100% | 10 |
+| OpenAI `gpt-4.1-mini` | 64% (36/56) | 60% | 64% | 100% | 12 |
+| Ollama 7b | 71% (40/56) | 100% | 64% | 100% | 23 |
+| Gemini `2.5-flash` | 84% (47/56) | 80% | 87% | 0% | 11 |
+| Opus `4-8` | 89% (50/56) | 80% | 91% | 100% | 15 |
+| GPT-5.5 | 93% (52/56) | 90% | 93% | 100% | **6** |
+| **Sonnet `4-6`** | **98% (55/56)** | 100% | 98% | 100% | 16 |
 
 **A real, independent SAST tool (Semgrep) scores *below* our own hand-tuned
-regex rules (20% vs 38%)** — both far behind every AI model. Semgrep's
+regex rules (20% vs 34%)** — both far behind every AI model. Semgrep's
 community rules pattern-match real framework/library call sites
 (`cursor.execute()`, `subprocess.call(shell=True)`, …); most of the corpus
 (especially the 44 CWEval-derived cases, which are short self-contained
@@ -102,15 +97,14 @@ shapes even though the vulnerability is genuine. This makes Semgrep the more
 defensible academic baseline (not overfit to our cases) precisely because it
 does worse — it establishes a believable floor for what a generic tool
 achieves on this kind of code, which is the gap the AI numbers are filling.
-Semgrep is also the lowest-noise detector (2 FPs), tied with GPT-5.5.
+Semgrep is also the lowest-noise detector (2 FPs).
 
-**Sonnet achieves perfect recall (100%)** across all 56 cases — the first model
-to do so, and only revealed after correcting the mislabelled ground truth.
-Opus reaches 98% (55/56). GPT-5.5 ties the pre-correction Sonnet at 95% but
-with only 2 FPs — the most precise AI detector tested. Repeated scans
-(`detection@k`) add only +2 to +4 points and saturate by k=2; temperature (not
-scan count) is the actual lever — at temp 0 the discovery curve is flat, at
-temp ≥1 it gains ~8 points from sampling diversity, with 1.0 as the sweet spot.
+**Sonnet is the best detector (98%)** with 100% syntactic recall and only 1
+miss on local-semantic. **GPT-5.5 is the most precise AI detector** — 93%
+recall with only 6 FPs (fewest of any AI model). Repeated scans (`detection@k`)
+add only a few points and saturate by k=2; temperature (not scan count) is the
+actual lever — at temp 0 the discovery curve is flat, at temp ≥1 it gains ~8
+points from sampling diversity, with 1.0 as the sweet spot.
 
 ### 3.2 Detection skill ≠ fixing skill (the headline result)
 
@@ -126,7 +120,7 @@ temp ≥1 it gains ~8 points from sampling diversity, with 1.0 as the sweet spot
 *\*Ollama fix numbers are on the 12 Docker-free cases only — Docker + the
 resident local model can't coexist on the test machine (RAM contention).*
 
-**Sonnet — the perfect detector (100%) — is the *weakest Anthropic fixer*** (62%
+**Sonnet — the best detector (98%) — is the *weakest Anthropic fixer*** (62%
 functional-fix), while its sibling **Opus is the best fixer of any model
 tested** (80% full-56, 92% on the shared 12), at ~2.2× Sonnet's fix cost and
 **0 compile failures** across all 56 attempts (vs OpenAI 2, Sonnet 6, Gemini
@@ -139,50 +133,39 @@ at roughly 1/26 of Opus's cost.
 
 ### 3.3 Ensembling / voting — a clean negative result
 
-*Numbers below are pre-correction (the ensemble runs predate the ground truth fix)
-and are noted as such. The hierarchy conclusion is unchanged — if anything
-stronger, since Sonnet now achieves 100%.*
-
-| Ensemble strategy | Recall (pre-correction) |
+| Ensemble strategy | Recall |
 |---|---:|
-| Best single model (Sonnet) | 95% (53/56) → **100% corrected** |
-| All 6 detectors, union | 95% (53/56) — **no gain** |
-| All 6 + regex, union | 95% (53/56) — **no gain** |
-| Voting ≥2 detectors agree | 93% (52/56) |
-| Voting ≥3 detectors agree | 91% (51/56) |
+| Best single model (Sonnet) | **98% (55/56)** |
+| All AI models, union | 98% (55/56) — **no gain** |
+| All AI + regex, union | 98% (55/56) — **no gain** |
+| Voting ≥2 detectors agree | 96% (54/56) |
+| Voting ≥3 detectors agree | 93% (52/56) |
 
 **Union of every detector equals the single best model.** The detectors form a
 strict hierarchy (nested, not complementary) — every bug any weaker detector
-finds, Sonnet also finds; every other detector's unique count is 0. The
-previously-reported "hard ceiling" of 3 bugs missed by everyone was a ground
-truth labeling error, not a model limit (see §1 correction note). Regex adds a
-cheap +2 points when unioned with a sub-frontier model (Ollama/OpenAI/Gemini),
-but nothing for the Claude models. **Ensembling's real value is precision, not
-recall**: requiring ≥2 detectors to agree keeps 93% recall while discarding
-lone-detector noise — a near-free way to cut false positives (e.g. Ollama's 27).
+finds, Sonnet also finds; every other detector's unique count is 0. Only 1 bug
+is missed by every model. **Ensembling's real value is precision, not recall**:
+requiring ≥2 detectors to agree keeps 96% recall while discarding lone-detector
+noise — a near-free way to cut false positives.
 **Practical takeaway: use the single best model for recall; don't pay for an ensemble.**
 
 ### 3.4 False-positive reduction via a second-model filter — fails for strong models
 
 Full cross-model verification matrix (self + every pairing among the three
-strong models, plus the original weak→strong pair). These runs predate the
-ground truth correction; recall figures below are pre-correction and noted as such.
+strong models, plus the original weak→strong pair).
 
-| Detector → Judge | FPs removed | Recall before→after (pre-correction) |
+| Detector → Judge | FPs removed | Recall before→after |
 |---|---:|---:|
-| OpenAI → OpenAI (self) | 0 / 6 | 82%→77% |
-| Sonnet → Sonnet (self) | 1 / 10 | 100%→98% |
-| Opus → Opus (self) | 0 / 7 | 98%→93% |
-| OpenAI → Sonnet | 0 / 6 | 82%→80% |
-| OpenAI → Opus | 0 / 6 | 84%→80% |
-| Sonnet → OpenAI | 0 / 10 | 100%→95% |
-| Sonnet → Opus | 0 / 10 | 100%→95% |
-| Opus → Sonnet | 0 / 7 | 98%→95% |
-| Opus → OpenAI | 0 / 7 | 98%→91% |
-| **Ollama → Sonnet (weak→strong)** | **7 / 27** | 68%→66% |
-
-*Note: FP counts and recall are corrected for the 3 relabelled cases. The verify
-runs themselves have not been re-executed; raw JSONL numbers differ slightly.*
+| OpenAI → OpenAI (self) | 0 / 8 | 71%→66% |
+| Sonnet → Sonnet (self) | 1 / 15 | 93%→91% |
+| Opus → Opus (self) | 0 / 12 | 93%→88% |
+| OpenAI → Sonnet | 0 / 9 | 70%→68% |
+| OpenAI → Opus | 0 / 9 | 73%→68% |
+| Sonnet → OpenAI | 0 / 14 | 93%→89% |
+| Sonnet → Opus | 0 / 12 | 95%→91% |
+| Opus → Sonnet | 0 / 12 | 89%→88% |
+| Opus → OpenAI | 0 / 10 | 89%→84% |
+| **Ollama → Sonnet (weak→strong)** | **7 / 26** | 55%→54% |
 
 **No pairing among the three strong models (Sonnet, Opus, gpt-4.1-mini)
 removes false positives — self or cross.** Every strong-model cell removes 0
@@ -284,13 +267,13 @@ lists what goes in it and which numbers above it draws on.
    native tests or the Docker CWEval exploit-based oracle). List all 8
    detectors/models tested (§2). Note the ground truth correction and its
    methodological implication (§1 correction note).
-3. **Detection Results** — Recall table by tier and by model (§3.1): regex 38%
-   → Semgrep 20% → Ollama 68% → OpenAI 82% → Gemini 91% → GPT-5.5 95% →
-   Opus 98% → Sonnet 100%; the Semgrep-below-regex result and why it's the
-   more defensible baseline; detection@k saturating by k=2; the
+3. **Detection Results** — Recall table by tier and by model (§3.1): regex 34%
+   → Semgrep 20% → OpenAI 64% → Ollama 71% → Gemini 84% → Opus 89% → GPT-5.5
+   93% → Sonnet 98%; the Semgrep-below-regex result and why it's the more
+   defensible baseline; detection@k saturating by k=2; the
    temperature-not-scan-count finding.
-4. **Fixing Results (headline)** — The detect≠fix split (§3.2): Sonnet perfect
-   detector (100%) but weakest Anthropic fixer (62%); Opus best fixer overall
+4. **Fixing Results (headline)** — The detect≠fix split (§3.2): Sonnet best
+   detector (98%) but weakest Anthropic fixer (62%); Opus best fixer overall
    (80%, 92% on the shared 12, 0 compile failures); gpt-4.1-mini best
    cost-adjusted fixer (68% at ~1/26 Opus's cost); GPT-5.5 at 73% but
    expensive. This is the paper's central, counterintuitive claim — lead the
@@ -310,5 +293,5 @@ lists what goes in it and which numbers above it draws on.
    at one *role* (detection) with strength/cheapness at a *different role*
    (fixing), not just adding more model opinions to the same role. Future
    work: expand beyond 56 cases, add variance bars (current numbers are single
-   runs), investigate the filename-leakage confound (CWE number in filename
-   visible to detector).
+   runs), re-run verify/ensemble experiments to confirm FP-reduction results
+   with the updated detection data.
