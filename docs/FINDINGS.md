@@ -212,7 +212,48 @@ Opus**.
 
 ---
 
-## 4. Other results worth keeping
+## 4. Poster/report-priority findings
+
+### 4.1 Filename leakage reveals capability-tier dependence on context hints
+
+Source filenames like `cwe_918_0_js_unsafe.js` leak the CWE number directly to the
+model. When we replaced these with generic `code.js`/`code.py` display names:
+
+- **Frontier models (Sonnet, GPT-5.5, Gemini) were unaffected.** Their apparent r1→r3
+  gain (+4–6pp) is entirely explained by the 4 ground truth label corrections — tracing
+  specific missed bugs confirms every newly-detected case in r3 was a previously
+  mislabeled ground truth, not a prompt improvement. Frontier models don't need (and
+  may be slightly harmed by) an explicit CWE anchor.
+- **gpt-4.1-mini lost 8pp when the hint was removed** (78% → 70%), and unlike the
+  frontier models this drop is not explained by label corrections — it simply found
+  fewer bugs without the CWE number in the filename. Weaker models rely on explicit
+  context to focus their search; stronger models perform genuine code analysis
+  regardless.
+
+**Poster/report angle:** evidence that capability tier determines whether a model does
+real semantic reasoning vs. hint-following. The leaked filename is a confound only for
+weaker models — removing it gives you the honest figure.
+
+### 4.2 Per-CWE detection reveals a frontier-only capability cliff for SSRF
+
+| CWE | n | Sonnet | GPT-5.5 | Gemini | Opus | mini | Ollama |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| CWE-918 (SSRF) | 4 | **4/4** | 2/4 | 1/4 | 2/4 | 0/4 | 0/4 |
+| CWE-1333 (ReDoS) | 4 | **4/4** | 3/4 | **4/4** | **4/4** | 1/4 | 0/4 |
+| CWE-89 (SQL injection) | 5 | **5/5** | 4/5 | 3/5 | 3/5 | 4/5 | **5/5** |
+
+SSRF (CWE-918) is the starkest: Sonnet gets 4/4, every other model gets ≤2/4, and
+mini + Ollama get 0/4. This is a **frontier-only detection** — SSRF requires tracing
+a tainted URL across function calls, which appears to demand the deepest semantic
+reasoning. ReDoS is similar but broader (Gemini and Opus handle it). SQL injection
+shows an interesting inversion: Ollama matches Sonnet (5/5) while Gemini and Opus
+only get 3/5, suggesting pattern-recognition-style vulns don't separate the tiers.
+
+**Poster/report angle:** not all CWEs are equally hard, and the hard ones are exactly
+the taint-tracing / semantic-reasoning ones — which is the core argument for why AI
+detection beats rule-based tools on this corpus.
+
+## 5. Other results worth keeping
 
 - **Detection@k saturates fast.** Repeated scans give +2 to +4 points overall,
   almost all realized by the 2nd scan; frontier models (Sonnet, Opus) are flat
@@ -232,7 +273,7 @@ Opus**.
 
 ---
 
-## 5. Setup / reproduction caveats
+## 6. Setup / reproduction caveats
 
 - **Ollama fix** could only run on the 12 Docker-free cases (`seeded` +
   `literature`) — Docker and the resident 7B model can't coexist on the test
@@ -245,7 +286,7 @@ Opus**.
 
 ---
 
-## 6. Poster outline (6 sections)
+## 7. Poster outline (6 sections)
 
 A working outline for turning this into a poster/short paper. Each section
 lists what goes in it and which numbers above it draws on.

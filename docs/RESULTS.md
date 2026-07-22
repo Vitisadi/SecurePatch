@@ -134,21 +134,29 @@ matching our mislabelled type string. Regex and Semgrep did not detect either
 
 The original r1 runs used the actual source filename (e.g. `cwe_943_0_js_unsafe.js`)
 as the display name in the detection prompt, leaking the CWE number to the model.
-r3 uses a generic `code.py`/`code.js`. The table below scores r1 files against r3
-ground truth (same labels, different prompt) to isolate the pure filename effect.
+r3 uses a generic `code.py`/`code.js`. r1 and r3 also differ in ground truth labels
+(4 corrections applied in r3). The table scores r1 files against r3 ground truth to
+hold labels constant, so the delta reflects only the prompt change.
 
-| Model | r1 recall (leaky) | r3 recall (clean) | Effect |
+| Model | r1 recall (leaky, r3 GT) | r3 recall (clean) | Δ |
 |---|---:|---:|---:|
-| Sonnet 4-6 | 94% (53/56) | **100%** (56/56) | −3pp without hint (frontier unaffected) |
-| GPT-5.5 | 89% (50/56) | **93%** (52/56) | −2pp without hint (frontier unaffected) |
-| Gemini 2.5-flash | 85% (48/56) | **91%** (51/56) | −3pp without hint (frontier unaffected) |
-| gpt-4.1-mini | **78%** (44/56) | 70% (39/56) | **+9pp with hint** — mini benefited from CWE clue |
+| Sonnet 4-6 | 94% (53/56) | **100%** (56/56) | +6pp |
+| GPT-5.5 | 89% (50/56) | **93%** (52/56) | +4pp |
+| Gemini 2.5-flash | 85% (48/56) | **91%** (51/56) | +6pp |
+| gpt-4.1-mini | **78%** (44/56) | 70% (39/56) | **−8pp** |
 
-**Frontier models are unaffected by the filename hint** — they find more bugs
-without it (cleaner prompt, less anchoring to a specific CWE). **gpt-4.1-mini is
-the exception**: the leaked CWE number gave it a +9pp boost, suggesting weaker
-models rely on the hint to focus their search. All numbers in this document use the
-clean (r3) prompt, which is the conservative, non-inflated figure for mini.
+**Important caveat — frontier deltas are entirely explained by GT corrections, not
+the filename change.** Tracing which specific bugs Sonnet gained from r1→r3 shows
+all 3 are the mislabeled cases (`js/py-cwe_943_0`, `py-cwe_400_0`) where Sonnet
+reported the correct type in r1 but was penalized for not matching the wrong label.
+With the labels fixed, those 3 become hits — the clean filename had zero net effect
+on Sonnet. The same pattern likely holds for GPT-5.5 and Gemini.
+
+**gpt-4.1-mini is the genuine leakage finding**: it *lost* 8pp when the CWE hint
+was removed, and unlike the frontier models its missed bugs in r3 are not explained
+by label corrections — it simply found fewer bugs without the filename anchor.
+This suggests weaker models rely on explicit CWE context to focus their search,
+while frontier models do not need (and may be slightly harmed by) the hint.
 
 ## Per-CWE detection breakdown
 
