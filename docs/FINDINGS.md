@@ -75,16 +75,16 @@ Salt), CWE-798 (Hardcoded Credentials), CWE-918 (SSRF), CWE-1333 (ReDoS).
 
 ### 3.1 AI detection crushes rule-based baselines
 
-| Detector | Overall recall | Syntactic | Local-semantic | Cross-function | False positives |
-|---|---:|---:|---:|---:|---:|
-| Regex (homemade) | 34% (19/56) | 100% | 22% | 0% | 3 |
-| **Semgrep (off-the-shelf SAST)** | **20% (11/56)** | 40% | 16% | 0% | **2** |
-| Ollama 7b | 68% (38/56) | 90% | 62% | 100% | 30 |
-| OpenAI `gpt-4.1-mini` | 70% (39/56) | 70% | 69% | 100% | 7 |
-| Gemini `2.5-flash` | 91% (51/56) | 80% | 93% | 100% | 8 |
-| Opus `4-8` | 91% (51/56) | 80% | 93% | 100% | 14 |
-| GPT-5.5 | 93% (52/56) | 90% | 93% | 100% | **5** |
-| **Sonnet `4-6` (perfect detector)** | **100% (56/56)** | 100% | 100% | 100% | 15 |
+| Detector | Recall | Precision | F1 | Syntactic | Local-semantic | Cross-function | FPs |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Regex (homemade) | 34% (19/56) | 86% | 49% | 100% | 22% | 0% | 3 |
+| **Semgrep (off-the-shelf SAST)** | **20% (11/56)** | 85% | 32% | 40% | 16% | 0% | **2** |
+| Ollama 7b | 68% (38/56) | 56% | 61% | 90% | 62% | 100% | 30 |
+| OpenAI `gpt-4.1-mini` | 70% (39/56) | 85% | 76% | 70% | 69% | 100% | 7 |
+| Gemini `2.5-flash` | 91% (51/56) | 86% | 89% | 80% | 93% | 100% | 8 |
+| Opus `4-8` | 91% (51/56) | 78% | 84% | 80% | 93% | 100% | 14 |
+| **GPT-5.5 (best F1)** | 93% (52/56) | **91%** | **92%** | 90% | 93% | 100% | **5** |
+| **Sonnet `4-6` (best recall)** | **100% (56/56)** | 79% | 88% | 100% | 100% | 100% | 15 |
 
 **A real, independent SAST tool (Semgrep) scores *below* our own hand-tuned
 regex rules (20% vs 34%)** — both far behind every AI model. Semgrep's
@@ -99,8 +99,9 @@ achieves on this kind of code, which is the gap the AI numbers are filling.
 Semgrep is also the lowest-noise detector (2 FPs).
 
 **Sonnet achieves perfect recall (100%)** across all 56 cases and all 3 tiers,
-reaching 100% at k=2 scans. **GPT-5.5 is the most precise AI detector** — 93%
-recall with only 5 FPs, fewest of any model. Gemini and Opus tie at 91%.
+reaching 100% at k=2 scans. **GPT-5.5 leads on F1 (92%)** — 93% recall with only
+5 FPs, giving it the best precision (91%) of any AI model. Sonnet's 15 FPs (mostly
+real-but-unlabeled findings) drop its F1 to 88% despite perfect recall. Gemini and Opus tie at 91%.
 Repeated scans (`detection@k`) add only a few points and saturate by k=2;
 temperature (not scan count) is the actual lever — at temp 0 the discovery
 curve is flat, at temp ≥1 it gains ~8 points from sampling diversity, with 1.0

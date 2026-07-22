@@ -73,6 +73,8 @@ matching our mislabelled type string. Regex and Semgrep did not detect either
 | cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
 | **Overall**     | 56 | 34% (19) | 20% (11) | 68% (38) | 70% (39) | 91% (51) | 93% (52) | 91% (51) | **100% (56)** |
 | False positives | —  | 3 | **2** | 30 | 7 | 8 | **5** | 14 | 15 |
+| Precision       | —  | 86% | 85% | 56% | 85% | 86% | **91%** | 78% | 79% |
+| **F1**          | —  | 49% | 32% | 61% | 76% | 89% | **92%** | 84% | 88% |
 
 ## Recall by collection
 
@@ -88,12 +90,12 @@ matching our mislabelled type string. Regex and Semgrep did not detect either
 |---|---:|---:|---:|---|
 | regex        | $0.000 | $0.0000 | <1s      | deterministic |
 | Semgrep      | $0.000 | $0.0000 | ~7.9 min | local; ~8.4s/case (per-file process + rule load overhead) |
-| Ollama 7b    | $0.000 | $0.0000 | ~10.4 min| local; `results/ollama_detect_v2.jsonl` |
-| OpenAI mini  | $0.051 | $0.0009 | ~4.0 min | `results/openai_detect_v2.jsonl` |
-| Gemini flash | $0.085 | $0.0015 | ~17.2 min| `results/gemini_detect_v2.jsonl` |
-| Sonnet       | $0.756 | $0.0135 | ~12.9 min| `results/sonnet_detect_v2.jsonl` |
-| Opus         | $1.402 | $0.0250 | ~10.2 min| `results/opus_detect_v2.jsonl` |
-| GPT-5.5      | $2.167 | $0.0387 | ~18.3 min| `results/gpt55_detect_v2.jsonl` |
+| Ollama 7b    | $0.000 | $0.0000 | ~10.4 min| local; `results/ollama_detect_r3.jsonl` |
+| OpenAI mini  | $0.051 | $0.0009 | ~4.0 min | `results/openai_detect_r3.jsonl` |
+| Gemini flash | $0.085 | $0.0015 | ~17.2 min| `results/gemini_detect_r3.jsonl` |
+| Sonnet       | $0.756 | $0.0135 | ~12.9 min| `results/sonnet_detect_r3.jsonl` |
+| Opus         | $1.402 | $0.0250 | ~10.2 min| `results/opus_detect_r3.jsonl` |
+| GPT-5.5      | $2.167 | $0.0387 | ~18.3 min| `results/gpt55_detect_r3.jsonl` |
 
 ## Detection observations
 
@@ -127,6 +129,59 @@ matching our mislabelled type string. Regex and Semgrep did not detect either
    code" is low, which is the gap the paper's AI-detection numbers are filling.
    It is also by far the lowest-noise detector (2 FPs, beating even the regex
    baseline's 3), consistent with rule-based tools trading recall for precision.
+
+## Filename leakage effect (r1 vs r3)
+
+The original r1 runs used the actual source filename (e.g. `cwe_943_0_js_unsafe.js`)
+as the display name in the detection prompt, leaking the CWE number to the model.
+r3 uses a generic `code.py`/`code.js`. The table below scores r1 files against r3
+ground truth (same labels, different prompt) to isolate the pure filename effect.
+
+| Model | r1 recall (leaky) | r3 recall (clean) | Effect |
+|---|---:|---:|---:|
+| Sonnet 4-6 | 94% (53/56) | **100%** (56/56) | −3pp without hint (frontier unaffected) |
+| GPT-5.5 | 89% (50/56) | **93%** (52/56) | −2pp without hint (frontier unaffected) |
+| Gemini 2.5-flash | 85% (48/56) | **91%** (51/56) | −3pp without hint (frontier unaffected) |
+| gpt-4.1-mini | **78%** (44/56) | 70% (39/56) | **+9pp with hint** — mini benefited from CWE clue |
+
+**Frontier models are unaffected by the filename hint** — they find more bugs
+without it (cleaner prompt, less anchoring to a specific CWE). **gpt-4.1-mini is
+the exception**: the leaked CWE number gave it a +9pp boost, suggesting weaker
+models rely on the hint to focus their search. All numbers in this document use the
+clean (r3) prompt, which is the conservative, non-inflated figure for mini.
+
+## Per-CWE detection breakdown
+
+| CWE | n | Sonnet | GPT-5.5 | Gemini | Opus | mini | Ollama |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| CWE-22 (path traversal) | 4 | 4/4 | 4/4 | 4/4 | 4/4 | 4/4 | 3/4 |
+| CWE-78 (OS command injection) | 4 | 4/4 | 4/4 | 4/4 | 4/4 | 2/4 | 4/4 |
+| CWE-79 (XSS) | 3 | 3/3 | 3/3 | 3/3 | 3/3 | 2/3 | 2/3 |
+| CWE-89 (SQL injection) | 5 | 5/5 | 4/5 | 3/5 | 3/5 | 4/5 | 5/5 |
+| CWE-95 (code injection) | 3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+| CWE-113 (header injection) | 2 | 2/2 | 2/2 | 2/2 | 2/2 | 1/2 | 0/2 |
+| CWE-117 (log injection) | 2 | 2/2 | 2/2 | 2/2 | 2/2 | 1/2 | 0/2 |
+| CWE-326 (weak crypto) | 4 | 4/4 | 4/4 | 4/4 | 4/4 | 4/4 | 3/4 |
+| CWE-327 (broken algorithm) | 6 | 6/6 | 6/6 | 6/6 | 6/6 | 5/6 | 6/6 |
+| CWE-329 (missing IV) | 2 | 2/2 | 2/2 | 2/2 | 2/2 | 2/2 | 2/2 |
+| CWE-338 (weak PRNG) | 1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 |
+| CWE-347 (JWT) | 2 | 2/2 | 2/2 | 2/2 | 2/2 | 1/2 | 2/2 |
+| CWE-377 (temp file) | 1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 |
+| CWE-502 (deserialization) | 3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+| CWE-643 (XPath injection) | 2 | 2/2 | 2/2 | 2/2 | 2/2 | 2/2 | 2/2 |
+| CWE-732 (insecure permissions) | 1 | 1/1 | 1/1 | 1/1 | 1/1 | 0/1 | 0/1 |
+| CWE-760 (predictable salt) | 1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 0/1 |
+| CWE-798 (hardcoded cred) | 1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 | 1/1 |
+| CWE-20 (input validation) | 1 | 1/1 | 1/1 | 1/1 | 0/1 | 0/1 | 0/1 |
+| CWE-1333 (ReDoS) | 4 | 4/4 | 3/4 | 4/4 | 4/4 | 1/4 | 0/4 |
+| CWE-918 (SSRF) | 4 | 4/4 | 2/4 | 1/4 | 2/4 | 0/4 | 0/4 |
+
+**Hardest CWEs:** CWE-918 (SSRF) and CWE-1333 (ReDoS) are the most model-discriminating.
+SSRF: Sonnet 4/4 but Gemini 1/4, Opus 2/4, mini and Ollama 0/4 — a frontier-only
+detection. ReDoS: Ollama misses all 4, mini gets only 1/4.
+**CWE-89 (SQL injection):** surprisingly hard for Gemini and Opus (3/5) vs. Ollama
+which gets 5/5 — likely because our ReDoS cases were relabeled from CWE-400 and
+Ollama's broad scanning catches the pattern.
 
 ## Detection@k — how many scans to find a bug?
 
