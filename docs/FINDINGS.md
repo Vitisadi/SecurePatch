@@ -174,38 +174,31 @@ precision at only −1 point recall.
 only verify a weak/cheap detector with a stronger judge — and never use a
 weaker judge.**
 
-### 3.5 Split detect→fix pipeline — smart for the cheap fixer, not for Opus
+### 3.5 Split detect→fix pipeline — Sonnet detection improves both fixers
 
-| Pipeline | Functional-fix | Cost (56 cases) |
-|---|---:|---:|
-| Sonnet detect + Sonnet fix (self) | 66%* | $0.330 |
-| OpenAI detect + OpenAI fix (self) | 70%* | $0.028 |
-| Opus detect + Opus fix (self) | 80%* | $0.731 |
-| Sonnet detect → Opus fix | 79% | $0.735 |
-| **Sonnet detect → gpt-4.1-mini fix** | **79%** | **$0.030** |
+| Pipeline | Functional-fix | Real breakage | Cost |
+|---|---:|---:|---:|
+| Sonnet detect + Sonnet fix (self) | 69% (39/56) | 16 | $0.330 |
+| OpenAI detect + OpenAI fix (self) | 73% (41/56) | 11 | $0.028 |
+| Opus detect + Opus fix (self) | 80% (45/56) | 6 | $0.731 |
+| **Sonnet detect → gpt-4.1-mini fix** | **76% (43/56)** | **7** | **$0.030** |
+| **Sonnet detect → Opus fix** | **82% (46/56)** | 8 | $0.735 |
 
-*\*Recomputed directly from the JSONL with one consistent rule (`fixed` +
-regressed-with-new-finding-only) for a clean apples-to-apples read across this
-table; differs by ~1–2 points from the rounded self-fix figures quoted in §3.2
-(rounding/methodology drift between analysis passes, not new data).*
+The fix loop attempts every ground-truth bug regardless of detection — a miss
+falls back to bare ground-truth metadata for the fix prompt, while a hit
+supplies Sonnet's richer finding description (line, type, title). The only
+variable the mixed pipeline changes is *whose enrichment text* the fixer sees.
 
-**Handing Sonnet's findings to `gpt-4.1-mini` for fixing reaches 79%
-functional-fix — 9 points above solo gpt-4.1-mini (70%) and within 1 point of
-solo Opus (80%) — at gpt-4.1-mini's cost (~24× cheaper than Opus).** That's the
-best cost/quality point found in the whole project. Sonnet's richer, correctly
-typed finding descriptions also **eliminate gpt-4.1-mini's compile failures
-entirely** (2→0) and cut real breakage from 11 to 7. By contrast, **Sonnet
-detect → Opus fix does not beat Opus fixing itself** (79% vs 80%, same cost) —
-splitting only helps when the *fixer* alone is the weak link, not when it's
-already frontier-grade. (Note: the existing fix loop attempts every
-ground-truth bug regardless of detector recall — a miss falls back to the bug's
-ground-truth metadata — so what a mixed pipeline actually varies is *whose
-finding-enrichment text* the fixer sees, which is exactly the variable this
-question asks about.)
+**Sonnet detect → gpt-4.1-mini fix: 76%** — +3pp above solo mini (73%) at the
+same cost ($0.030). Real breakage drops from 11 → 7. Best cost/quality point
+in the project (~24× cheaper than Opus for −6pp).
 
-**Practical recipe:** cost-sensitive → **detect with Sonnet, fix with
-`gpt-4.1-mini`**; quality-first (cost no object) → **detect and fix with
-Opus**.
+**Sonnet detect → Opus fix: 82%** — +2pp above solo Opus (80%) at the same
+cost ($0.735). The only pipeline to beat solo Opus. Routing through Sonnet
+helps even a strong fixer by providing more precise finding descriptions.
+
+**Practical recipe:** cost-sensitive → **Sonnet detect → gpt-4.1-mini fix**
+(76%, $0.030); quality-first → **Sonnet detect → Opus fix** (82%, $0.735).
 
 ---
 
@@ -309,24 +302,21 @@ lists what goes in it and which numbers above it draws on.
    k=2; the temperature-not-scan-count finding.
 4. **Fixing Results (headline)** — The detect≠fix split (§3.2): Sonnet best
    detector (98%) but weakest Anthropic fixer (62%); Opus best fixer overall
-   (80%, 92% on the shared 12, 0 compile failures); gpt-4.1-mini best
-   cost-adjusted fixer (68% at ~1/26 Opus's cost); GPT-5.5 at 73% but
-   expensive. This is the paper's central, counterintuitive claim — lead the
-   poster with it.
+   (80%, 92% on the shared 12); gpt-4.1-mini best cost-adjusted fixer (73%
+   at ~1/26 Opus's cost); GPT-5.5 at 75% but expensive. This is the paper's
+   central, counterintuitive claim — lead the poster with it.
 5. **Multi-Model Strategies** — Three negative-leaning results that all point
    the same direction (§3.3, §3.4, §3.5): ensembling/voting doesn't raise
    recall (union = best single model; only helps precision via voting);
    cross-model verification doesn't cut FPs among strong models (only a
-   genuine weak→strong capability gap works, e.g. Ollama→Sonnet +7pts
-   precision); but a split detect→fix pipeline *does* pay off when the fixer
-   is the weak link (Sonnet→gpt-4.1-mini: 79% functional-fix at ~1/24 Opus's
-   cost, beating solo gpt-4.1-mini by 9 points).
-6. **Conclusions** — Practical recipes: cost-sensitive product = detect with
-   Sonnet, fix with gpt-4.1-mini; quality-first = Opus for both. General
-   lesson: throwing more models at a problem (ensembling, cross-verification)
-   mostly doesn't help — the exception is when you deliberately pair strength
-   at one *role* (detection) with strength/cheapness at a *different role*
-   (fixing), not just adding more model opinions to the same role. Future
-   work: expand beyond 56 cases, add variance bars (current numbers are single
-   runs), re-run verify/ensemble experiments to confirm FP-reduction results
+   genuine weak→strong capability gap works, e.g. Ollama→Sonnet +8pts
+   precision); but a split detect→fix pipeline *does* pay off for both fixers
+   (Sonnet→mini: 76% at mini's cost; Sonnet→Opus: 82%, +2pp over solo Opus).
+6. **Conclusions** — Practical recipes: cost-sensitive = Sonnet detect →
+   gpt-4.1-mini fix (76%, $0.030); quality-first = Sonnet detect → Opus fix
+   (82%, $0.735). General lesson: throwing more models at the *same role*
+   (ensembling, cross-verification) mostly doesn't help — pairing strength at
+   *different roles* (best detector + best/cheapest fixer) does. Future work:
+   expand beyond 56 cases, add variance bars (current numbers are single
+   runs), explore multi-turn fixing for hard CWEs (SSRF, ReDoS)
    with the updated detection data.

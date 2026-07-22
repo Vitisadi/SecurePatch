@@ -462,10 +462,9 @@ ignoring the new-finding signal) is the fairer measure:
    oracle's own security check) instead of the AI re-scan.
 6. **The Docker oracle scaled cleanly** — 43–44 of 56 cases verified with the
    exploit-based `security` oracle, zero pipeline errors across four full runs.
-7. **Two "product" recipes, by budget:** cost-sensitive → detect with Sonnet,
-   **fix with `gpt-4.1-mini`** (cheapest good fixer); quality-first → **detect
-   and fix with Opus** (best fixer, and ties Opus/Sonnet at 100% on syntactic
-   detection) if the ~13×-vs-Sonnet fix cost is acceptable.
+7. **Two "product" recipes, by budget:** cost-sensitive → **Sonnet detect →
+   gpt-4.1-mini fix** (76% at $0.030); quality-first → **Sonnet detect → Opus
+   fix** (82% at $0.735, +2pp over solo Opus at the same cost).
 
 ## Mixed pipeline — best detector (Sonnet) hands off to a different fixer
 
@@ -483,22 +482,19 @@ exactly the question asked ("does handing the best detector's findings to a
 different fixer help") without needing a separate coverage-filtering run.
 
 Added `--detect-provider`/`--detect-model` to the `fix` CLI to decouple the two
-roles, then ran: **Sonnet detects (best detector, 95% recall) → Opus fixes**
+roles, then ran: **Sonnet detects (best detector, 100% recall) → Opus fixes**
 and **Sonnet detects → gpt-4.1-mini fixes**, both over the full 56 cases.
+
+All numbers use the consistent metric: vuln gone + compiles (tests_passed=null
+treated as pass for cweval rescan cases).
 
 | Pipeline | fixed | func-fix | real breakage (test+compile) | cost | $/attempt |
 |---|---:|---:|---:|---:|---:|
-| Sonnet detect + **Sonnet** fix (self) | 19 | 37/56 (66%) | 16 | $0.330 | $0.0059 |
+| Sonnet detect + **Sonnet** fix (self) | 19 | 39/56 (69%) | 16 | $0.330 | $0.0059 |
 | Opus detect + **Opus** fix (self) | 34 | 45/56 (80%) | 6 | $0.731 | $0.0131 |
-| OpenAI detect + **OpenAI** fix (self) | 27 | 39/56 (70%) | 11 | $0.028 | $0.0005 |
-| **Sonnet detect → Opus fix** | 28 | **44/56 (79%)** | 8 | $0.735 | $0.0131 |
-| **Sonnet detect → gpt-4.1-mini fix** | 24 | **44/56 (79%)** | **7** | **$0.030** | **$0.0005** |
-
-*(Self-model numbers here are recomputed directly from the JSONL with one
-consistent rule — `fixed` + regressed-with-new-finding-only — for a clean
-apples-to-apples read; they differ by ~1–2 points from the rounded figures
-earlier in this doc, which is rounding/methodology drift between passes, not
-new data.)*
+| OpenAI detect + **OpenAI** fix (self) | 27 | 41/56 (73%) | 11 | $0.028 | $0.0005 |
+| **Sonnet detect → Opus fix** | 28 | **46/56 (82%)** | 8 | $0.735 | $0.0131 |
+| **Sonnet detect → gpt-4.1-mini fix** | 24 | **43/56 (76%)** | **7** | **$0.030** | **$0.0005** |
 
 **Findings:**
 1. **The split pipeline is smart, and one pairing is a clear win.** Handing
