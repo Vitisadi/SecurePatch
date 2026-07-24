@@ -88,6 +88,9 @@ PRICING: dict[str, tuple[float, float]] = {
     "claude-sonnet-4": (3.00, 15.00),
     "claude-haiku-4": (1.00, 5.00),
     # Google Gemini
+    "gemini-3.5-flash": (0.30, 2.50),   # approximate — same tier as 2.5-flash
+    "gemini-3.1-flash": (0.30, 2.50),   # approximate
+    "gemini-3-flash": (0.30, 2.50),     # approximate
     "gemini-2.5-pro": (1.25, 10.00),
     "gemini-2.5-flash": (0.30, 2.50),
     "gemini-2.0-flash": (0.10, 0.40),

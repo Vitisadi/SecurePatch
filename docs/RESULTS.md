@@ -12,8 +12,8 @@ human-readable summary we keep in version control. See
 [`RESEARCH_PLAN.md`](RESEARCH_PLAN.md) §3 for metric definitions.
 
 **Models under test:** regex (baseline), **Semgrep (off-the-shelf SAST baseline)**,
-OpenAI `gpt-4.1-mini`, Google Gemini `2.5-flash`, Anthropic Sonnet `4-6`, Anthropic
-Opus `4-8`, OpenAI `gpt-5.5`, and a local Ollama `qwen2.5-coder:7b` (runs on-machine, $0).
+OpenAI `gpt-4.1-mini`, Google Gemini `2.5-flash`, Anthropic Haiku `4-5`, Anthropic
+Sonnet `4-6`, Anthropic Opus `4-8`, OpenAI `gpt-5.5`, and a local Ollama `qwen2.5-coder:7b` (runs on-machine, $0).
 
 > **Note on detection prompt (2026-07-21):** All AI detection runs use a generic
 > `code.py` / `code.js` display filename in the prompt. An earlier run used the
@@ -66,23 +66,23 @@ matching our mislabelled type string. Regex and Semgrep did not detect either
 
 ## Recall by obscurity tier
 
-| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Gemini 2.5-flash | GPT-5.5 | Opus 4-8 | Sonnet 4-6 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| syntactic       | 10 | **100%** | 40% | 90% | 70% | 80% | 90% | 80% | **100%** |
-| local-semantic  | 45 | 22% | 16% | 62% | 69% | 93% | 93% | 93% | **100%** |
-| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
-| **Overall**     | 56 | 34% (19) | 20% (11) | 68% (38) | 70% (39) | 91% (51) | 93% (52) | 91% (51) | **100% (56)** |
-| False positives | —  | 3 | **2** | 30 | 7 | 8 | **5** | 14 | 15 |
-| Precision       | —  | 86% | 85% | 56% | 85% | 86% | **91%** | 78% | 79% |
-| **F1**          | —  | 49% | 32% | 61% | 76% | 89% | **92%** | 84% | 88% |
+| Tier | Cases | Regex | Semgrep | Ollama 7b | OpenAI mini | Haiku 4-5 | Gemini 2.5-flash | GPT-5.5 | Opus 4-8 | Sonnet 4-6 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| syntactic       | 10 | **100%** | 40% | 90% | 70% | 80% | 80% | 90% | 80% | **100%** |
+| local-semantic  | 45 | 22% | 16% | 62% | 69% | 93% | 93% | 93% | 93% | **100%** |
+| cross-function  | 1  | 0% | 0% | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** | **100%** |
+| **Overall**     | 56 | 34% (19) | 20% (11) | 68% (38) | 70% (39) | 91% (51) | 91% (51) | 93% (52) | 91% (51) | **100% (56)** |
+| False positives | —  | 3 | **2** | 30 | 7 | 20 | 8 | **5** | 14 | 15 |
+| Precision       | —  | 86% | 85% | 56% | 85% | 72% | 86% | **91%** | 78% | 79% |
+| **F1**          | —  | 49% | 32% | 61% | 76% | 80% | 89% | **92%** | 84% | 88% |
 
 ## Recall by collection
 
-| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Gemini | GPT-5.5 | Opus | Sonnet |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| cweval     | 44 | 23% | 16% | 61% | 68% | 93% | 93% | 93% | **100%** |
-| literature | 6  | 83% | 33% | 83% | 83% | 83% | 83% | 83% | **100%** |
-| seeded     | 6  | 83% | 33% | **100%** | 67% | 83% | **100%** | 83% | **100%** |
+| Collection | Cases | Regex | Semgrep | Ollama | OpenAI | Haiku | Gemini | GPT-5.5 | Opus | Sonnet |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| cweval     | 44 | 23% | 16% | 61% | 68% | 93% | 93% | 93% | 93% | **100%** |
+| literature | 6  | 83% | 33% | 83% | 83% | 83% | 83% | 83% | 83% | **100%** |
+| seeded     | 6  | 83% | 33% | **100%** | 67% | 83% | 83% | **100%** | 83% | **100%** |
 
 ## Detection cost & time
 
@@ -93,6 +93,7 @@ matching our mislabelled type string. Regex and Semgrep did not detect either
 | Ollama 7b    | $0.000 | $0.0000 | ~10.4 min| local; `results/ollama_detect_r3.jsonl` |
 | OpenAI mini  | $0.051 | $0.0009 | ~4.0 min | `results/openai_detect_r3.jsonl` |
 | Gemini flash | $0.085 | $0.0015 | ~17.2 min| `results/gemini_detect_r3.jsonl` |
+| **Haiku 4-5**| **$0.245** | **$0.0044** | ~6.2 min | `results/haiku_detect.jsonl` |
 | Sonnet       | $0.756 | $0.0135 | ~12.9 min| `results/sonnet_detect_r3.jsonl` |
 | Opus         | $1.402 | $0.0250 | ~10.2 min| `results/opus_detect_r3.jsonl` |
 | GPT-5.5      | $2.167 | $0.0387 | ~18.3 min| `results/gpt55_detect_r3.jsonl` |
@@ -203,6 +204,7 @@ in the detection JSONL (reproduce with `python -m securepatch_bench discovery`).
 | qwen2.5-coder:7b | 64% | 66% | 68% |
 | gpt-4.1-mini     | 66% | 68% | 70% |
 | gemini-2.5-flash | 84% | 89% | 91% |
+| haiku-4-5        | 89% | 89% | 91% |
 | gpt-5.5          | 84% | 89% | 93% |
 | opus-4-8         | 89% | 91% | 91% |
 | sonnet-4-6       | 98% | **100%** | **100%** |
@@ -379,33 +381,33 @@ present, nothing broke) / `error`.
 
 ## Verdict distribution (full 56 cases; Ollama = 12)
 
-| Verdict | OpenAI mini | Gemini flash | Sonnet | Opus | Ollama 7b (12) | GPT-5.5 |
-|---|---:|---:|---:|---:|---:|---:|
-| ✅ fixed      | 27 (48%) | 25 (45%) | 19 (34%) | 34 (61%) | 2 (17%) | 36 (64%) |
-| ⚠️ regressed  | 23 (41%) | 31 (55%) | 34 (61%) | 17 (30%) | 10 (83%) | 13 (23%) |
-| ➖ no-op      | 6 (11%)  | 0        | 3 (5%)   | 5 (9%)   | 0 | 4 (7%) |
-| ✗ error      | 0        | 0        | 0        | 0        | 0 | 3 (5%) |
+| Verdict | OpenAI mini | Gemini flash | Haiku 4-5 | Sonnet | Opus | Ollama 7b (12) | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ✅ fixed      | 27 (48%) | 25 (45%) | 9 (16%)  | 19 (34%) | 34 (61%) | 2 (17%) | 36 (64%) |
+| ⚠️ regressed  | 23 (41%) | 31 (55%) | 45 (80%) | 34 (61%) | 17 (30%) | 10 (83%) | 13 (23%) |
+| ➖ no-op      | 6 (11%)  | 0        | 2 (4%)   | 3 (5%)   | 5 (9%)   | 0 | 4 (7%) |
+| ✗ error      | 0        | 0        | 0        | 0        | 0        | 0 | 3 (5%) |
 
 ## The `regressed` count is noisy — use functional-fix instead
 
 The strict `fixed` verdict marks a fix regressed if the **AI re-scan flags any new
 finding**, and that re-scan is stochastic. Breaking `regressed` down by real cause:
 
-| Regressed cause | OpenAI | Gemini | Sonnet | Opus | Ollama(12) | GPT-5.5 |
-|---|---:|---:|---:|---:|---:|---:|
-| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 18 | 11 | 3 | 5 |
-| test failure (real) | 9 | 7 | 10 | 6 | 3 | 1 |
-| compile failure (real) | 2 | **15** | 6 | 0 | 4 | **0** |
+| Regressed cause | OpenAI | Gemini | Haiku | Sonnet | Opus | Ollama(12) | GPT-5.5 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| new-finding only (noisy; compiles + tests pass) | 12 | 9 | 10 | 18 | 11 | 3 | 5 |
+| test failure (real) | 9 | 7 | 1 | 10 | 6 | 3 | 1 |
+| compile failure (real) | 2 | **15** | **34** | 6 | 0 | 4 | **0** |
 
 **Functional-fix rate** (vuln removed **and** compiles **and** tests/oracle pass,
 ignoring the new-finding signal) is the fairer measure:
 
-| Metric | OpenAI mini | Gemini | Sonnet | Opus | GPT-5.5 | Ollama (12) |
-|---|---:|---:|---:|---:|---:|---:|
-| strict `fixed` | 27/56 (48%) | 25/56 (45%) | 19/56 (34%) | 34/56 (61%) | 36/56 (64%) | 2/12 (17%) |
-| **functional-fix** | 41/56 (73%) | 36/56 (64%) | 39/56 (69%) | **45/56 (80%)** | 42/56 (75%) | 4/12 (33%) |
-| real breakage (compile+test) | 11 | 22 | 16 | 6 | **1** | 7 |
-| cost | $0.028 | $0.047 | $0.330 | $0.731 | $1.841 | $0.000 |
+| Metric | OpenAI mini | Gemini | Haiku | Sonnet | Opus | GPT-5.5 | Ollama (12) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| strict `fixed` | 27/56 (48%) | 25/56 (45%) | 9/56 (16%) | 19/56 (34%) | 34/56 (61%) | 36/56 (64%) | 2/12 (17%) |
+| **functional-fix** | 41/56 (73%) | 36/56 (64%) | 11/56 (20%) | 39/56 (69%) | **45/56 (80%)** | 42/56 (75%) | 4/12 (33%) |
+| real breakage (compile+test) | 11 | 22 | **35** | 16 | 6 | **1** | 7 |
+| cost | $0.028 | $0.047 | $0.109 | $0.330 | $0.731 | $1.841 | $0.000 |
 
 ### Apples-to-apples: functional-fix on the SAME 12 Docker-free cases
 
@@ -431,6 +433,7 @@ ignoring the new-finding signal) is the fairer measure:
 |---|---:|---:|---:|---|
 | OpenAI mini | $0.028 | $0.0005 | ~12.3 min | `results/fix_openai.jsonl` |
 | Gemini flash| $0.047 | $0.0008 | ~28.7 min | `results/fix_gemini.jsonl` |
+| **Haiku 4-5** | **$0.109** | **$0.0019** | ~6.4 min | `results/fix_haiku.jsonl` |
 | Sonnet      | $0.330 | $0.0059 | ~17.7 min | `results/fix_sonnet.jsonl` |
 | Opus        | $0.731 | $0.0131 | ~12.6 min | `results/fix_opus.jsonl` |
 | Ollama 7b (12) | $0.000 | $0.0000 | ~2 min | `results/fix_ollama.jsonl` |
@@ -456,7 +459,12 @@ ignoring the new-finding signal) is the fairer measure:
 5. **Ollama is a poor fixer** — 33% functional-fix on the easy 12-case
    Docker-free slice (seeded + literature), with 7 real breakages out of 12.
    Free, but not reliable enough to use unsupervised.
-6. **`regressed` needs the reason breakdown to mean anything** — roughly half of
+6. **Haiku is a strong detector but a very poor fixer** — 91% recall (tied with
+   Gemini flash) at only $0.245 for detection, but 20% functional-fix and 35 real
+   breakages (compile failures dominate: all 23 JS cases emit invalid syntax
+   regardless of which model detects). Haiku's fixing fails on JS categorically —
+   it produces patches that break JS syntax on nearly every JS case.
+7. **`regressed` needs the reason breakdown to mean anything** — roughly half of
    all regressions are noisy "new-finding-only" from the stochastic re-scan. Next
    improvement: gate new-findings with a *deterministic* detector (regex, or the
    oracle's own security check) instead of the AI re-scan.
@@ -493,8 +501,13 @@ treated as pass for cweval rescan cases).
 | Sonnet detect + **Sonnet** fix (self) | 19 | 39/56 (69%) | 16 | $0.330 | $0.0059 |
 | Opus detect + **Opus** fix (self) | 34 | 45/56 (80%) | 6 | $0.731 | $0.0131 |
 | OpenAI detect + **OpenAI** fix (self) | 27 | 41/56 (73%) | 11 | $0.028 | $0.0005 |
+| Haiku detect + **Haiku** fix (self) | 9 | 11/56 (20%) | 35 | $0.109 | $0.0019 |
 | **Sonnet detect → Opus fix** | 28 | **46/56 (82%)** | 8 | $0.735 | $0.0131 |
 | **Sonnet detect → gpt-4.1-mini fix** | 24 | **43/56 (76%)** | **7** | **$0.030** | **$0.0005** |
+| Haiku detect → **Sonnet** fix | 13 | 22/56 (39%) | 10 | $0.309 | $0.0055 |
+| Haiku detect → **gpt-4.1-mini** fix | 11 | 29/56 (52%) | 4 | $0.028 | $0.0005 |
+| **Sonnet detect → Haiku fix** | 19 | 19/56 (34%) | 35 | $0.113 | $0.0020 |
+| Gemini Flash detect → **Haiku** fix | 11 | 12/56 (21%) | 36 | $0.114 | $0.0020 |
 
 **Findings:**
 1. **The split pipeline is smart, and one pairing is a clear win.** Handing
@@ -525,6 +538,37 @@ treated as pass for cweval rescan cases).
    slightly, so there's no reason to route Opus's fixer through a different
    detector — but there's every reason to route a cheap fixer through Sonnet's
    detector first.
+
+## Haiku mixed pipelines
+
+Haiku's strong detection (91%) but weak fixing (20%) makes it an interesting
+candidate for mixed pipeline experiments: does pairing it with a better fixer
+recover the quality gap, and does using it as a cheap fixer degrade good detectors?
+
+| Pipeline | fixed | func-fix | real breakage | cost | $/attempt |
+|---|---:|---:|---:|---:|---:|
+| Haiku detect → **Sonnet** fix | 13 | 22/56 (39%) | 10 | $0.309 | $0.0055 |
+| Haiku detect → **gpt-4.1-mini** fix | 11 | 29/56 (52%) | 4 | $0.028 | $0.0005 |
+| **Sonnet** detect → **Haiku** fix | 19 | 19/56 (34%) | 35 | $0.113 | $0.0020 |
+
+**Findings:**
+1. **A better fixer does not rescue Haiku detection** — routing Haiku findings to
+   Sonnet only gets 39% functional-fix, far below Sonnet's self-fix (69%). The JS
+   compile failures are Haiku-fixer-specific, not a detection problem: Sonnet fix
+   paired with Haiku detect still only reaches 39% because Haiku's detection
+   output provides low-quality enrichment for the fixer.
+2. **Haiku detect → gpt-4.1-mini fix (52%) outperforms Haiku detect → Sonnet fix
+   (39%)** — cheaper and better. Both fixers are limited by Haiku's enrichment
+   quality; gpt-4.1-mini is simply more robust to noisy finding descriptions.
+3. **Sonnet detect → Haiku fix (34%) is worse than Haiku fixing alone (20% solo
+   but 34% functional-fix)** — Sonnet's richer detection text partially compensates
+   for Haiku's fixer weakness, lifting it from 20% to 34% functional-fix, but the
+   JS compile failure problem persists regardless of detector. The 35 real breakages
+   are the same whether Haiku detects or Sonnet detects.
+4. **Haiku is best used as a detector, not a fixer** — at $0.245 for 91% recall
+   it competes with Gemini flash ($0.085, same 91%) on recall but costs 3× more.
+   As a fixer it is strictly worse than gpt-4.1-mini on every metric. The
+   cost-optimal cheap pipeline remains: **Sonnet detect → gpt-4.1-mini fix**.
 
 ---
 

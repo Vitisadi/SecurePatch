@@ -62,6 +62,7 @@ Salt), CWE-798 (Hardcoded Credentials), CWE-918 (SSRF), CWE-1333 (ReDoS).
 |---|---|---|
 | `claude-opus-4-8` | Anthropic | detector, fixer, judge |
 | `claude-sonnet-4-6` | Anthropic | detector, fixer, judge |
+| `claude-haiku-4-5` | Anthropic | detector, fixer, mixed pipelines |
 | `gpt-4.1-mini` | OpenAI | detector, fixer, judge |
 | `gpt-5.5` | OpenAI | detector, fixer |
 | `gemini-2.5-flash` | Google | detector, fixer |
@@ -82,6 +83,7 @@ Salt), CWE-798 (Hardcoded Credentials), CWE-918 (SSRF), CWE-1333 (ReDoS).
 | Ollama 7b | 68% (38/56) | 56% | 61% | 90% | 62% | 100% | 30 |
 | OpenAI `gpt-4.1-mini` | 70% (39/56) | 85% | 76% | 70% | 69% | 100% | 7 |
 | Gemini `2.5-flash` | 91% (51/56) | 86% | 89% | 80% | 93% | 100% | 8 |
+| Haiku `4-5` | 91% (51/56) | 72% | 80% | 80% | 93% | 100% | 20 |
 | Opus `4-8` | 91% (51/56) | 78% | 84% | 80% | 93% | 100% | 14 |
 | **GPT-5.5 (best F1)** | 93% (52/56) | **91%** | **92%** | 90% | 93% | 100% | **5** |
 | **Sonnet `4-6` (best recall)** | **100% (56/56)** | 79% | 88% | 100% | 100% | 100% | 15 |
@@ -111,6 +113,7 @@ as the sweet spot.
 
 | Model | Functional-fix (full 56) | Functional-fix (shared 12) | Real breakage | Cost |
 |---|---:|---:|---:|---:|
+| Haiku `4-5` | 20% (11/56) | — | **35** | $0.109 |
 | Sonnet (best *detector*, **100% recall**) | 69% (39/56) | 50% | 16 | $0.330 |
 | Gemini `2.5-flash` | 64% (36/56) | 42% | 22 | $0.047 |
 | OpenAI `gpt-4.1-mini` | 73% (41/56) | 67% | 11 | $0.028 |
@@ -121,13 +124,15 @@ as the sweet spot.
 *†Ollama: Docker + resident 7B model can't coexist on test machine (RAM contention); only seeded + literature cases run.*
 
 **Sonnet — the best detector (100%) — is mid-pack as a fixer (69%)**, while its
-sibling **Opus is the best fixer** (80% full-56, 92% on the shared 12). **GPT-5.5
-has the fewest real breakages (1/56)** — the cleanest patches of any model — but
-at $1.841 for 56 cases (~66× mini's cost) it sits only between mini and Opus in
-functional-fix rate (75%), making it cost-uncompetitive. **`gpt-4.1-mini` is the
-best cost-adjusted fixer** — 73% at ~$0.0005/attempt vs Opus's $0.0131 (26× cheaper
-for 7 fewer points). **Ollama is a poor fixer** — 33% on the easy 12-case slice
-with 7 real breakages, not reliable unsupervised.
+sibling **Opus is the best fixer** (80% full-56, 92% on the shared 12). **Haiku —
+the cheapest Anthropic model — is a strong detector (91%, tied with Gemini) but
+the worst fixer (20%)**: it produces invalid JS syntax on all 23 JS cases regardless
+of which model detects. **GPT-5.5 has the fewest real breakages (1/56)** — the
+cleanest patches of any model — but at $1.841 for 56 cases (~66× mini's cost) it
+sits only between mini and Opus in functional-fix rate (75%), making it
+cost-uncompetitive. **`gpt-4.1-mini` is the best cost-adjusted fixer** — 73% at
+~$0.0005/attempt vs Opus's $0.0131 (26× cheaper for 7 fewer points). **Ollama is a
+poor fixer** — 33% on the easy 12-case slice with 7 real breakages, not reliable unsupervised.
 
 ### 3.3 Ensembling / voting — a clean negative result
 
@@ -178,9 +183,14 @@ weaker judge.**
 
 | Pipeline | Functional-fix | Real breakage | Cost |
 |---|---:|---:|---:|
+| Haiku detect + Haiku fix (self) | 20% (11/56) | 35 | $0.109 |
 | Sonnet detect + Sonnet fix (self) | 69% (39/56) | 16 | $0.330 |
 | OpenAI detect + OpenAI fix (self) | 73% (41/56) | 11 | $0.028 |
 | Opus detect + Opus fix (self) | 80% (45/56) | 6 | $0.731 |
+| Haiku detect → gpt-4.1-mini fix | 52% (29/56) | 4 | $0.028 |
+| Haiku detect → Sonnet fix | 39% (22/56) | 10 | $0.309 |
+| Sonnet detect → Haiku fix | 34% (19/56) | 35 | $0.113 |
+| Gemini Flash detect → Haiku fix | 21% (12/56) | 36 | $0.114 |
 | **Sonnet detect → gpt-4.1-mini fix** | **76% (43/56)** | **7** | **$0.030** |
 | **Sonnet detect → Opus fix** | **82% (46/56)** | 8 | $0.735 |
 
@@ -197,8 +207,16 @@ in the project (~24× cheaper than Opus for −6pp).
 cost ($0.735). The only pipeline to beat solo Opus. Routing through Sonnet
 helps even a strong fixer by providing more precise finding descriptions.
 
+**Haiku mixed pipeline:** Haiku detect → gpt-4.1-mini fix (52%, $0.028) is
+surprisingly competitive for an all-cheap pipeline, but still 24pp below
+Sonnet→mini. Routing a strong fixer through Haiku detection (Haiku→Sonnet: 39%)
+or routing Haiku as fixer through Sonnet detection (Sonnet→Haiku: 34%) both
+underperform their respective solo baselines — the JS compile failure is the
+ceiling, not detection quality.
+
 **Practical recipe:** cost-sensitive → **Sonnet detect → gpt-4.1-mini fix**
-(76%, $0.030); quality-first → **Sonnet detect → Opus fix** (82%, $0.735).
+(76%, $0.030); quality-first → **Sonnet detect → Opus fix** (82%, $0.735);
+ultra-budget → **Haiku detect → gpt-4.1-mini fix** (52%, $0.028).
 
 ---
 
