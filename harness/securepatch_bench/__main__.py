@@ -207,6 +207,7 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                         "detected": res.detected_count,
                         "bug_count": res.bug_count,
                         "false_positives": len(res.false_positives),
+                        "false_positive_findings": res.false_positives,
                         "missed": [bug.id for bug in res.missed],
                         "matched": [m.bug.id for m in res.matched],
                         "per_scan_matched": [
@@ -214,6 +215,9 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                         ],
                         "per_scan_false_positives": [
                             len(s.false_positives) for s in report.per_scan
+                        ],
+                        "per_scan_false_positive_findings": [
+                            s.false_positives for s in report.per_scan
                         ],
                         "usage": report.usage.as_dict() if report.usage else None,
                         "surprises": report.surprises,
