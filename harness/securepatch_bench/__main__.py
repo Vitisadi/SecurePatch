@@ -30,7 +30,7 @@ from . import fixloop as fixloop_mod
 from . import verifier as verifier_mod
 from .corpus import CorpusError, OBSCURITY_TIERS, DEFAULT_CORPUS_DIR
 from .core_bridge import CoreBridgeError, scan_file
-from .detectors import AIDetector, Detector, RegexDetector, SastDetector, SastDetectorError
+from .detectors import AIDetector, CachedFindingDetector, Detector, RegexDetector, SastDetector, SastDetectorError
 from .fixer import AIFixer
 from .providers import ProviderError, get_provider
 from .results import ResultWriter
@@ -254,10 +254,19 @@ def _cmd_fix(args: argparse.Namespace) -> int:
         return 1
 
     fixer = AIFixer(provider, model=args.model)
-    detector = AIDetector(
-        detect_provider,
-        model=args.detect_model if args.detect_provider else args.model,
-    )
+
+    # --detect-jsonl: replay pre-computed detection results instead of re-running
+    # the detector live. Post-fix rescans fall back to the cheap regex detector.
+    if getattr(args, "detect_jsonl", None):
+        detector = CachedFindingDetector(
+            args.detect_jsonl,
+            label=getattr(args, "detect_label", "") or "",
+        )
+    else:
+        detector = AIDetector(
+            detect_provider,
+            model=args.detect_model if args.detect_provider else args.model,
+        )
 
     try:
         wall_start = time.perf_counter()
@@ -327,7 +336,7 @@ def _cmd_fix(args: argparse.Namespace) -> int:
                         "provider": args.provider,
                         "model": fixer.model,
                         "detect_provider": args.detect_provider or args.provider,
-                        "detect_model": detector.model,
+                        "detect_model": getattr(detector, "model", detector.name),
                         "case_id": att.case_id,
                         "collection": att.collection,
                         "bug_id": att.bug_id,
@@ -604,6 +613,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Detector model id when --detect-provider is set (default: that "
         "provider's default).",
+    )
+    fix.add_argument(
+        "--detect-jsonl",
+        default=None,
+        metavar="JSONL",
+        help="Path to a pre-computed detection JSONL (from 'bench' phase). "
+        "Replays cached recall instead of re-running the detector live. "
+        "Post-fix rescans fall back to the regex detector. "
+        "Mutually exclusive with --detect-provider.",
+    )
+    fix.add_argument(
+        "--detect-label",
+        default=None,
+        metavar="LABEL",
+        help="Short label for the cached detector (used in recorded rows). "
+        "Defaults to the JSONL filename stem.",
     )
     fix.add_argument(
         "--benchmarks",

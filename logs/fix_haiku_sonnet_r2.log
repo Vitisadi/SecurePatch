@@ -1,0 +1,126 @@
+fixer=fix:anthropic:claude-sonnet-4-6  detector=cached:haiku  attempts=56  window=2
+
+per attempt:
+  js-cwe_020_0               fixed     improper-input-validation  [compileok testsok vulngone]  $0.0101  6.1s
+      - vuln gone, compiles, tests pass
+  js-cwe_022_0               fixed     path-traversal  [compileok testsok vulngone]  $0.0085  7.0s
+      - vuln gone, compiles, tests pass
+  js-cwe_078_0               fixed     command-injection  [compileok testsok vulngone]  $0.0074  7.5s
+      - vuln gone, compiles, tests pass
+  js-cwe_079_0               fixed     xss  [compileok testsok vulngone]  $0.0064  11.8s
+      - vuln gone, compiles, tests pass
+  js-cwe_095_0               regressed code-injection  [compileFAIL testsFAIL vulnstill new=1]  $0.0059  15.9s
+      - patched file no longer compiles
+  js-cwe_113_0               fixed     http-response-splitting  [compileok testsok vulngone]  $0.0134  13.7s
+      - vuln gone, compiles, tests pass
+  js-cwe_117_0               fixed     log-injection  [compileok testsok vulngone]  $0.0063  3.9s
+      - vuln gone, compiles, tests pass
+  js-cwe_1333_0              regressed redos  [compileFAIL testsFAIL vulnstill]  $0.0076  9.4s
+      - patched file no longer compiles
+  js-cwe_326_0               regressed weak-cryptography  [compileok testsFAIL vulnstill]  $0.0043  8.2s
+      - a previously-passing test now fails
+  js-cwe_326_1               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0046  6.5s
+      - vuln gone, compiles, tests pass
+  js-cwe_327_0               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0057  6.8s
+      - vuln gone, compiles, tests pass
+  js-cwe_327_1               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0064  3.9s
+      - patched file no longer compiles
+  js-cwe_327_2               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0113  5.7s
+      - vuln gone, compiles, tests pass
+  js-cwe_329_0               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0080  4.4s
+      - vuln gone, compiles, tests pass
+  js-cwe_347_0               regressed improper-signature-verification  [compileok testsFAIL vulngone]  $0.0068  3.7s
+      - a previously-passing test now fails
+  js-cwe_400_0               fixed     redos  [compileok testsok vulngone]  $0.0043  3.1s
+      - vuln gone, compiles, tests pass
+  js-cwe_502_0               fixed     deserialization  [compileok testsok vulngone]  $0.0068  7.5s
+      - vuln gone, compiles, tests pass
+  js-cwe_643_0               regressed xpath-injection  [compileok testsFAIL vulnstill]  $0.0112  6.1s
+      - a previously-passing test now fails
+  js-cwe_732_2               fixed     incorrect-permissions  [compileok testsok vulngone]  $0.0064  3.7s
+      - vuln gone, compiles, tests pass
+  js-cwe_760_0               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0111  6.3s
+      - vuln gone, compiles, tests pass
+  js-cwe_918_0               regressed ssrf  [compileFAIL testsFAIL vulnstill]  $0.0112  11.4s
+      - patched file no longer compiles
+  js-cwe_918_1               fixed     ssrf  [compileok testsok vulngone]  $0.0079  11.5s
+      - vuln gone, compiles, tests pass
+  js-cwe_943_0               fixed     sql-injection  [compileok testsok vulngone]  $0.0129  13.8s
+      - vuln gone, compiles, tests pass
+  py-cwe_022_0               fixed     path-traversal  [compileok testsok vulngone]  $0.0039  6.9s
+      - vuln gone, compiles, tests pass
+  py-cwe_022_2               no-op     path-traversal  [compileok testsok vulnstill]  $0.0050  4.9s
+      - vulnerability still detected after fix
+  py-cwe_078_0               fixed     command-injection  [compileok testsok vulngone]  $0.0029  2.1s
+      - vuln gone, compiles, tests pass
+  py-cwe_079_0               fixed     xss  [compileok testsok vulngone]  $0.0019  1.7s
+      - vuln gone, compiles, tests pass
+  py-cwe_095_0               regressed code-injection  [compileok testsFAIL vulnstill]  $0.0024  2.5s
+      - a previously-passing test now fails
+  py-cwe_113_0               regressed http-response-splitting  [compileok testsFAIL vulnstill]  $0.0034  5.5s
+      - a previously-passing test now fails
+  py-cwe_117_0               fixed     log-injection  [compileok testsok vulngone]  $0.0025  2.2s
+      - vuln gone, compiles, tests pass
+  py-cwe_1333_0              no-op     redos  [compileok testsok vulnstill]  $0.0042  14.1s
+      - vulnerability still detected after fix
+  py-cwe_326_0               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0022  1.8s
+      - vuln gone, compiles, tests pass
+  py-cwe_326_1               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0025  2.0s
+      - vuln gone, compiles, tests pass
+  py-cwe_327_1               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0022  3.4s
+      - vuln gone, compiles, tests pass
+  py-cwe_327_2               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0056  6.8s
+      - vuln gone, compiles, tests pass
+  py-cwe_329_0               fixed     weak-cryptography  [compileok testsok vulngone]  $0.0042  2.7s
+      - vuln gone, compiles, tests pass
+  py-cwe_347_0               no-op     improper-signature-verification  [compileok testsok vulnstill]  $0.0022  1.8s
+      - vulnerability still detected after fix
+  py-cwe_377_0               fixed     insecure-temp-file  [compileok testsok vulngone]  $0.0024  1.8s
+      - vuln gone, compiles, tests pass
+  py-cwe_400_0               fixed     redos  [compileok testsok vulngone]  $0.0044  3.6s
+      - vuln gone, compiles, tests pass
+  py-cwe_502_0               fixed     deserialization  [compileok testsok vulngone]  $0.0052  7.1s
+      - vuln gone, compiles, tests pass
+  py-cwe_643_0               fixed     xpath-injection  [compileok testsok vulngone]  $0.0046  10.4s
+      - vuln gone, compiles, tests pass
+  py-cwe_918_0               regressed ssrf  [compileok testsFAIL vulnstill]  $0.0049  5.1s
+      - a previously-passing test now fails
+  py-cwe_918_1               regressed ssrf  [compileFAIL testsFAIL vulnstill]  $0.0057  5.0s
+      - patched file no longer compiles
+  py-cwe_943_0               fixed     sql-injection  [compileok testsok vulngone]  $0.0028  9.9s
+      - vuln gone, compiles, tests pass
+  cwe-022-path-traversal-python fixed     path-traversal  [compileok testsok vulngone]  $0.0039  3.8s
+      - vuln gone, compiles, tests pass
+  cwe-078-cmdi-subprocess    regressed command-injection  [compileok testsFAIL vulngone]  $0.0026  2.6s
+      - a previously-passing test now fails
+  cwe-079-xss-innerhtml      regressed xss  [compileok testsFAIL vulnstill new=1]  $0.0029  2.2s
+      - a previously-passing test now fails
+  cwe-089-sqli-python        no-op     sql-injection  [compileok testsok vulnstill]  $0.0062  14.3s
+      - vulnerability still detected after fix
+  cwe-502-deserialization-pickle regressed deserialization  [compileFAIL testsFAIL vulngone]  $0.0032  5.6s
+      - patched file no longer compiles
+  cwe-798-hardcoded-credentials fixed     hardcoded-secret  [compileok testsok vulngone]  $0.0025  2.0s
+      - vuln gone, compiles, tests pass
+  js-sqli-concat             regressed sql-injection  [compileok testsok vulngone new=1]  $0.0048  3.0s
+      - fix introduced new finding(s): sql-injection
+  js-sqli-crossfn            fixed     sql-injection  [compileok testsok vulngone]  $0.0059  4.0s
+      - vuln gone, compiles, tests pass
+  js-weak-random-token       fixed     weak-randomness  [compileok testsok vulngone]  $0.0019  4.6s
+      - vuln gone, compiles, tests pass
+  py-cmdi-ping               fixed     command-injection  [compileok testsok vulngone]  $0.0032  2.5s
+      - vuln gone, compiles, tests pass
+  py-code-injection-eval     fixed     code-injection  [compileok testsok vulngone]  $0.0080  13.8s
+      - vuln gone, compiles, tests pass
+  py-weak-hash-md5           fixed     weak-cryptography  [compileok testsok vulngone]  $0.0021  1.9s
+      - vuln gone, compiles, tests pass
+
+verdicts:
+  fixed      37
+  regressed  15
+  no-op      4
+  error      0
+
+model usage: tokens in/out=26125/15235  cost=$0.3069  latency=339772ms
+avg per attempt: $0.0055
+wall time: 958.5s total (17.1s/attempt)
+recorded 56 rows -> C:\Users\liakht\Dropbox\PC\Documents\GitHub\SecurePatch\harness\results\fix_haiku_sonnet_r2.jsonl

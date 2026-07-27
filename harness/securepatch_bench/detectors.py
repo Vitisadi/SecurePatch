@@ -16,8 +16,10 @@ from __future__ import annotations
 import json
 import re
 import shutil
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Dict, List, Set
 from typing import Any, Optional, Protocol
 
 from ._proc import run_captured
@@ -312,3 +314,83 @@ def parse_findings(text: str) -> list[dict[str, Any]]:
             }
         )
     return findings
+
+
+class CachedFindingDetector:
+    """Replay pre-computed detection results from a bench JSONL file.
+
+    For the *initial* baseline scan the detector synthesises findings from
+    ground-truth metadata for every bug that was matched in the cached run,
+    and returns no findings for bugs that were missed (same as the fallback
+    path in _finding_for_bug). The rescan (post-fix verification) is
+    delegated to a cheap live detector — by default the regex detector —
+    because the oracle handles cweval cases authoritatively and native tests
+    handle seeded/literature cases; the AI rescan only feeds the noisy
+    new-finding signal which the functional-fix metric already ignores.
+
+    Usage
+    -----
+    detector = CachedFindingDetector("harness/results/sonnet_detect_r3.jsonl")
+    # Before each case in the fix loop, set context so scan() knows which
+    # cached findings to serve:
+    detector.set_case(case_id, bugs)
+    """
+
+    def __init__(
+        self,
+        jsonl_path: str | Path,
+        rescan_detector: "Detector | None" = None,
+        label: str = "",
+    ) -> None:
+        self._matched: Dict[str, Set[str]] = defaultdict(set)  # case_id -> {bug_id}
+        self._load(Path(jsonl_path))
+        self._rescan_detector: "Detector" = rescan_detector or RegexDetector()
+        self._current_case_id: str | None = None
+        self._current_bugs: list = []
+        self._initial_done: Set[str] = set()  # case_ids whose baseline was served
+        label = label or Path(jsonl_path).stem
+        self.name = f"cached:{label}"
+
+    def _load(self, path: Path) -> None:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                row = json.loads(line)
+                cid = row.get("case_id", "")
+                for bug_id in row.get("matched", []):
+                    self._matched[cid].add(bug_id)
+
+    def set_case(self, case_id: str, bugs: list) -> None:
+        """Call before the fix loop processes each case."""
+        self._current_case_id = case_id
+        self._current_bugs = bugs
+        self._initial_done.discard(case_id)
+
+    def scan(self, source_file: Path) -> "DetectorScan":
+        cid = self._current_case_id
+        if cid is None or cid in self._initial_done:
+            # Second call for this case = post-fix rescan → live detector
+            return self._rescan_detector.scan(source_file)
+
+        # First call = baseline scan → synthesise findings for matched bugs
+        self._initial_done.add(cid)
+        matched_ids = self._matched.get(cid, set())
+        findings: list = []
+        for bug in self._current_bugs:
+            if bug.id in matched_ids:
+                findings.append(
+                    {
+                        "id": bug.id,
+                        "type": bug.type,
+                        "line": bug.line_start - 1,  # 0-based
+                        "column": 0,
+                        "severity": "medium",
+                        "title": bug.type,
+                        "description": bug.description,
+                        "cwe": bug.cwe,
+                        "source": "cached",
+                    }
+                )
+        return DetectorScan(detector=self.name, findings=findings)

@@ -64,6 +64,11 @@ def run_fixloop(
     for case in load_corpus(corpus_dir, collection=collection):
         if case_id is not None and case.case_id != case_id:
             continue
+        # Allow CachedFindingDetector (and similar stateful detectors) to set
+        # per-case context so the first scan() call returns cached findings and
+        # subsequent rescan calls fall through to the live detector.
+        if hasattr(detector, "set_case"):
+            detector.set_case(case.case_id, list(case.bugs))
         for bug in case.bugs:
             report.attempts.append(_fix_one(case, bug, fixer, detector, window))
     if case_id is not None and not report.attempts:

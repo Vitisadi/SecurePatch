@@ -1,0 +1,126 @@
+fixer=fix:anthropic:claude-haiku-4-5-20251001  detector=cached:gemini  attempts=56  window=2
+
+per attempt:
+  js-cwe_020_0               regressed improper-input-validation  [compileFAIL testsFAIL vulnstill]  $0.0035  3.0s
+      - patched file no longer compiles
+  js-cwe_022_0               regressed path-traversal  [compileFAIL testsFAIL vulnstill]  $0.0029  3.7s
+      - patched file no longer compiles
+  js-cwe_078_0               regressed command-injection  [compileFAIL testsok vulngone]  $0.0025  4.2s
+      - patched file no longer compiles
+  js-cwe_079_0               regressed xss  [compileFAIL testsFAIL vulnstill]  $0.0022  2.0s
+      - patched file no longer compiles
+  js-cwe_095_0               regressed code-injection  [compileFAIL testsFAIL vulnstill]  $0.0019  2.1s
+      - patched file no longer compiles
+  js-cwe_113_0               regressed http-response-splitting  [compileFAIL testsFAIL vulnstill]  $0.0045  3.3s
+      - patched file no longer compiles
+  js-cwe_117_0               regressed log-injection  [compileFAIL testsFAIL vulnstill]  $0.0021  2.2s
+      - patched file no longer compiles
+  js-cwe_1333_0              regressed redos  [compileFAIL testsFAIL vulnstill]  $0.0022  1.9s
+      - patched file no longer compiles
+  js-cwe_326_0               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0015  1.9s
+      - patched file no longer compiles
+  js-cwe_326_1               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0016  1.5s
+      - patched file no longer compiles
+  js-cwe_327_0               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0019  2.0s
+      - patched file no longer compiles
+  js-cwe_327_1               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0018  1.8s
+      - patched file no longer compiles
+  js-cwe_327_2               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0038  3.0s
+      - patched file no longer compiles
+  js-cwe_329_0               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0027  3.2s
+      - patched file no longer compiles
+  js-cwe_347_0               regressed improper-signature-verification  [compileFAIL testsFAIL vulnstill]  $0.0023  2.6s
+      - patched file no longer compiles
+  js-cwe_400_0               regressed redos  [compileFAIL testsFAIL vulnstill]  $0.0014  2.0s
+      - patched file no longer compiles
+  js-cwe_502_0               regressed deserialization  [compileFAIL testsFAIL vulngone new=1]  $0.0023  4.4s
+      - patched file no longer compiles
+  js-cwe_643_0               regressed xpath-injection  [compileFAIL testsFAIL vulnstill]  $0.0040  3.0s
+      - patched file no longer compiles
+  js-cwe_732_2               regressed incorrect-permissions  [compileFAIL testsFAIL vulnstill]  $0.0021  2.2s
+      - patched file no longer compiles
+  js-cwe_760_0               regressed weak-cryptography  [compileFAIL testsFAIL vulnstill]  $0.0037  2.7s
+      - patched file no longer compiles
+  js-cwe_918_0               regressed ssrf  [compileFAIL testsFAIL vulnstill]  $0.0032  3.1s
+      - patched file no longer compiles
+  js-cwe_918_1               regressed ssrf  [compileFAIL testsFAIL vulnstill]  $0.0026  2.3s
+      - patched file no longer compiles
+  js-cwe_943_0               regressed sql-injection  [compileFAIL testsFAIL vulnstill new=1]  $0.0043  3.1s
+      - patched file no longer compiles
+  py-cwe_022_0               regressed path-traversal  [compileok testsFAIL vulnstill]  $0.0013  4.8s
+      - a previously-passing test now fails
+  py-cwe_022_2               regressed path-traversal  [compileok testsFAIL vulnstill]  $0.0014  1.5s
+      - a previously-passing test now fails
+  py-cwe_078_0               regressed command-injection  [compileok testsFAIL vulnstill]  $0.0010  1.2s
+      - a previously-passing test now fails
+  py-cwe_079_0               regressed xss  [compileok testsFAIL vulnstill]  $0.0007  1.6s
+      - a previously-passing test now fails
+  py-cwe_095_0               regressed code-injection  [compileok testsFAIL vulnstill]  $0.0040  4.6s
+      - a previously-passing test now fails
+  py-cwe_113_0               regressed http-response-splitting  [compileok testsFAIL vulnstill]  $0.0012  1.5s
+      - a previously-passing test now fails
+  py-cwe_117_0               regressed log-injection  [compileok testsFAIL vulnstill]  $0.0009  1.3s
+      - a previously-passing test now fails
+  py-cwe_1333_0              regressed redos  [compileFAIL testsFAIL vulnstill]  $0.0033  3.5s
+      - patched file no longer compiles
+  py-cwe_326_0               regressed weak-cryptography  [compileok testsFAIL vulnstill]  $0.0008  1.0s
+      - a previously-passing test now fails
+  py-cwe_326_1               regressed weak-cryptography  [compileok testsFAIL vulnstill]  $0.0009  1.5s
+      - a previously-passing test now fails
+  py-cwe_327_1               regressed weak-cryptography  [compileok testsFAIL vulnstill]  $0.0008  1.5s
+      - a previously-passing test now fails
+  py-cwe_327_2               regressed weak-cryptography  [compileok testsFAIL vulnstill]  $0.0019  1.9s
+      - a previously-passing test now fails
+  py-cwe_329_0               regressed weak-cryptography  [compileok testsFAIL vulnstill]  $0.0014  1.6s
+      - a previously-passing test now fails
+  py-cwe_347_0               regressed improper-signature-verification  [compileok testsFAIL vulnstill]  $0.0008  1.4s
+      - a previously-passing test now fails
+  py-cwe_377_0               regressed insecure-temp-file  [compileok testsFAIL vulnstill]  $0.0010  1.5s
+      - a previously-passing test now fails
+  py-cwe_400_0               regressed redos  [compileok testsFAIL vulnstill]  $0.0008  1.4s
+      - a previously-passing test now fails
+  py-cwe_502_0               regressed deserialization  [compileok testsFAIL vulnstill]  $0.0018  1.6s
+      - a previously-passing test now fails
+  py-cwe_643_0               regressed xpath-injection  [compileok testsFAIL vulnstill]  $0.0016  1.6s
+      - a previously-passing test now fails
+  py-cwe_918_0               regressed ssrf  [compileok testsFAIL vulnstill]  $0.0014  1.7s
+      - a previously-passing test now fails
+  py-cwe_918_1               regressed ssrf  [compileok testsFAIL vulnstill]  $0.0013  2.2s
+      - a previously-passing test now fails
+  py-cwe_943_0               regressed sql-injection  [compileok testsFAIL vulnstill]  $0.0010  2.2s
+      - a previously-passing test now fails
+  cwe-022-path-traversal-python regressed path-traversal  [compileok testsFAIL vulngone]  $0.0014  2.0s
+      - a previously-passing test now fails
+  cwe-078-cmdi-subprocess    regressed command-injection  [compileok testsFAIL vulngone]  $0.0009  1.0s
+      - a previously-passing test now fails
+  cwe-079-xss-innerhtml      regressed xss  [compileFAIL testsFAIL vulngone]  $0.0013  1.4s
+      - patched file no longer compiles
+  cwe-089-sqli-python        regressed sql-injection  [compileok testsFAIL vulngone]  $0.0018  2.3s
+      - a previously-passing test now fails
+  cwe-502-deserialization-pickle regressed deserialization  [compileFAIL testsFAIL vulngone new=1]  $0.0031  4.1s
+      - patched file no longer compiles
+  cwe-798-hardcoded-credentials regressed hardcoded-secret  [compileok testsFAIL vulngone]  $0.0009  1.1s
+      - a previously-passing test now fails
+  js-sqli-concat             regressed sql-injection  [compileFAIL testsFAIL vulngone new=1]  $0.0014  2.4s
+      - patched file no longer compiles
+  js-sqli-crossfn            regressed sql-injection  [compileFAIL testsFAIL vulngone]  $0.0019  1.7s
+      - patched file no longer compiles
+  js-weak-random-token       regressed weak-randomness  [compileFAIL testsFAIL vulngone]  $0.0007  1.0s
+      - patched file no longer compiles
+  py-cmdi-ping               regressed command-injection  [compileok testsFAIL vulngone]  $0.0011  1.2s
+      - a previously-passing test now fails
+  py-code-injection-eval     regressed code-injection  [compileok testsFAIL vulngone]  $0.0028  2.7s
+      - a previously-passing test now fails
+  py-weak-hash-md5           regressed weak-cryptography  [compileok testsFAIL vulngone]  $0.0007  1.2s
+      - a previously-passing test now fails
+
+verdicts:
+  fixed      0
+  regressed  56
+  no-op      0
+  error      0
+
+model usage: tokens in/out=26069/16384  cost=$0.1080  latency=124158ms
+avg per attempt: $0.0019
+wall time: 771.5s total (13.8s/attempt)
+recorded 56 rows -> C:\Users\liakht\Dropbox\PC\Documents\GitHub\SecurePatch\harness\results\fix_gemini_haiku_r2.jsonl
