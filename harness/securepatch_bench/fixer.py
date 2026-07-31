@@ -136,16 +136,20 @@ def parse_fixed_code(text: str) -> Optional[str]:
     if not stripped:
         return None
 
+    unfenced = _FENCE_RE.sub("", stripped).strip()
+
     # Primary contract: JSON object with a fixed_file string.
-    try:
-        data = json.loads(stripped)
-        if isinstance(data, dict) and isinstance(data.get("fixed_file"), str):
-            return data["fixed_file"]
-    except json.JSONDecodeError:
-        pass
+    # Try both the raw response and the de-fenced version (some models wrap
+    # their JSON reply in a ```json ... ``` fence).
+    for candidate in [stripped, unfenced]:
+        try:
+            data = json.loads(candidate)
+            if isinstance(data, dict) and isinstance(data.get("fixed_file"), str):
+                return data["fixed_file"]
+        except json.JSONDecodeError:
+            pass
 
     # Fallback: a fenced code block or bare text.
-    unfenced = _FENCE_RE.sub("", stripped).strip()
     return unfenced or None
 
 

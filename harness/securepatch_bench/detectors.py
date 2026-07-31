@@ -319,14 +319,15 @@ def parse_findings(text: str) -> list[dict[str, Any]]:
 class CachedFindingDetector:
     """Replay pre-computed detection results from a bench JSONL file.
 
-    For the *initial* baseline scan the detector synthesises findings from
-    ground-truth metadata for every bug that was matched in the cached run,
-    and returns no findings for bugs that were missed (same as the fallback
-    path in _finding_for_bug). The rescan (post-fix verification) is
-    delegated to a cheap live detector — by default the regex detector —
-    because the oracle handles cweval cases authoritatively and native tests
-    handle seeded/literature cases; the AI rescan only feeds the noisy
-    new-finding signal which the functional-fix metric already ignores.
+    For the initial baseline scan the detector replays the AI's actual findings
+    for matched bugs (including the original description, line, and CWE the
+    detector produced) plus any false positives, exactly as the real pipeline
+    would see them. For older JSONL files that lack matched_findings, it falls
+    back to synthesising findings from ground-truth metadata.
+
+    The rescan (post-fix verification) is delegated to a cheap live detector —
+    by default the regex detector — because the oracle handles cweval cases
+    authoritatively and native tests handle seeded/literature cases.
 
     Usage
     -----
@@ -342,7 +343,9 @@ class CachedFindingDetector:
         rescan_detector: "Detector | None" = None,
         label: str = "",
     ) -> None:
-        self._matched: Dict[str, Set[str]] = defaultdict(set)  # case_id -> {bug_id}
+        self._matched: Dict[str, Set[str]] = defaultdict(set)       # case_id -> {bug_id}
+        self._matched_findings: Dict[str, Dict[str, Any]] = {}      # case_id -> {bug_id: finding}
+        self._false_positives: Dict[str, list] = {}                 # case_id -> [finding, ...]
         self._load(Path(jsonl_path))
         self._rescan_detector: "Detector" = rescan_detector or RegexDetector()
         self._current_case_id: str | None = None
@@ -361,6 +364,10 @@ class CachedFindingDetector:
                 cid = row.get("case_id", "")
                 for bug_id in row.get("matched", []):
                     self._matched[cid].add(bug_id)
+                if "matched_findings" in row:
+                    self._matched_findings[cid] = row["matched_findings"]
+                if "false_positive_findings" in row:
+                    self._false_positives[cid] = row["false_positive_findings"]
 
     def set_case(self, case_id: str, bugs: list) -> None:
         """Call before the fix loop processes each case."""
@@ -374,12 +381,20 @@ class CachedFindingDetector:
             # Second call for this case = post-fix rescan → live detector
             return self._rescan_detector.scan(source_file)
 
-        # First call = baseline scan → synthesise findings for matched bugs
+        # First call = baseline scan → replay actual AI findings
         self._initial_done.add(cid)
         matched_ids = self._matched.get(cid, set())
+        ai_findings = self._matched_findings.get(cid)  # None for old-format JSOLs
         findings: list = []
+
         for bug in self._current_bugs:
-            if bug.id in matched_ids:
+            if bug.id not in matched_ids:
+                continue
+            if ai_findings and bug.id in ai_findings:
+                # Replay the detector's actual finding text
+                findings.append(ai_findings[bug.id])
+            else:
+                # Fallback for old JSOLs without matched_findings
                 findings.append(
                     {
                         "id": bug.id,
@@ -393,4 +408,7 @@ class CachedFindingDetector:
                         "source": "cached",
                     }
                 )
+
+        # Include false positives so the fixer sees exactly what the detector reported
+        findings.extend(self._false_positives.get(cid, []))
         return DetectorScan(detector=self.name, findings=findings)

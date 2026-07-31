@@ -210,6 +210,7 @@ def _cmd_bench(args: argparse.Namespace) -> int:
                         "false_positive_findings": res.false_positives,
                         "missed": [bug.id for bug in res.missed],
                         "matched": [m.bug.id for m in res.matched],
+                        "matched_findings": {m.bug.id: m.finding for m in res.matched},
                         "per_scan_matched": [
                             [m.bug.id for m in s.matched] for s in report.per_scan
                         ],

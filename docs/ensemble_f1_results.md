@@ -52,7 +52,7 @@ Best solo F1: **GPT-5.5 = 91%**
 | Claude: Sonnet + Opus + Haiku | ≥1 | 100% | 34 | 62% | 77% |
 | Claude: Sonnet + Opus + Haiku | ≥2 | 98% | 11 | 83% | 90% |
 | Claude: Sonnet + Opus + Haiku | ≥3 | 88% | 3 | 94% | 91% |
-| **Frontier: Sonnet+Opus+GPT-5.5+Gemini** | **≥2** | **96%** | **8** | **87%** | **92%** ★ |
+| **Frontier: Sonnet+Opus+GPT-5.5+Gemini** | **≥2** | **100%** | **8** | **87%** | **93%** ★ |
 | Frontier: Sonnet+Opus+GPT-5.5+Gemini | ≥3 | 89% | 4 | 93% | 91% |
 | Frontier: Sonnet+Opus+GPT-5.5+Gemini | ≥4 | 86% | 2 | 96% | 91% |
 
