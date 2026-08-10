@@ -13,27 +13,28 @@
 \contentsline {section}{\numberline {4}Pipeline Architecture and Methodology}{9}{section.4}%
 \contentsline {subsection}{\numberline {4.1}Detect $\rightarrow $ Enrich $\rightarrow $ Fix Pipeline}{9}{subsection.4.1}%
 \contentsline {subsection}{\numberline {4.2}CachedFindingDetector}{9}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}Models Under Test}{9}{subsection.4.3}%
-\contentsline {subsection}{\numberline {4.4}Metrics}{9}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}Experimental Controls and Methodology Corrections}{10}{subsection.4.5}%
-\contentsline {section}{\numberline {5}Results}{10}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Solo Pipeline Performance}{10}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Full 7$\times $7 Pipeline Heatmap}{10}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Detector Quality as the Dominant Variable}{11}{subsection.5.3}%
-\contentsline {subsection}{\numberline {5.4}Ground-Truth Fixer Experiment}{11}{subsection.5.4}%
-\contentsline {subsection}{\numberline {5.5}Cost-Efficiency Analysis}{12}{subsection.5.5}%
-\contentsline {subsection}{\numberline {5.6}Ensemble Detection}{12}{subsection.5.6}%
-\contentsline {section}{\numberline {6}Discussion}{13}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Why the Detector Matters More Than the Fixer}{13}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}The Haiku Fixer Failure}{13}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Practical Pairing Recommendations}{13}{subsection.6.3}%
-\contentsline {subsection}{\numberline {6.4}What Ensemble Detection Buys You}{13}{subsection.6.4}%
-\contentsline {section}{\numberline {7}Threats to Validity}{13}{section.7}%
-\contentsline {subsection}{\numberline {7.1}Construct Validity}{13}{subsection.7.1}%
-\contentsline {subsection}{\numberline {7.2}Internal Validity}{13}{subsection.7.2}%
-\contentsline {subsection}{\numberline {7.3}External Validity}{13}{subsection.7.3}%
-\contentsline {subsection}{\numberline {7.4}Reproducibility}{13}{subsection.7.4}%
-\contentsline {section}{\numberline {8}Future Work}{13}{section.8}%
-\contentsline {section}{\numberline {9}Conclusion}{13}{section.9}%
-\contentsline {section}{\numberline {A}Full Heatmap Data}{16}{appendix.A}%
-\contentsline {section}{\numberline {B}Per-Case Breakdown}{16}{appendix.B}%
+\contentsline {subsection}{\numberline {4.3}Models Under Test}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Metrics}{10}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Experimental Controls and v2 Methodology}{11}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Results}{11}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Solo Pipeline Performance}{11}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Full 7$\times $7 Pipeline Heatmap}{12}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Per-CWE Detection Performance}{13}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Detector Quality as the Dominant Variable}{14}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Ground-Truth Fixer Experiment}{14}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Cost-Efficiency Analysis}{15}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Ensemble Detection}{16}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.8}Effect of Repeated Scanning}{17}{subsection.5.8}%
+\contentsline {section}{\numberline {6}Discussion}{18}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Why the Detector Matters More Than the Fixer}{18}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Filename Leakage and Model Tier Dependence}{18}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}What Ensemble Detection Buys You}{19}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Practical Pairing Recommendations}{19}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Threats to Validity}{20}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Construct Validity}{20}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Internal Validity}{20}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}External Validity}{21}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Reproducibility}{21}{subsection.7.4}%
+\contentsline {section}{\numberline {8}Future Work}{21}{section.8}%
+\contentsline {section}{\numberline {9}Conclusion}{22}{section.9}%
+\contentsline {section}{\numberline {A}Full Heatmap Data}{25}{appendix.A}%
