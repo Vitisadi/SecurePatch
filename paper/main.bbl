@@ -11,39 +11,43 @@
   Saxe]{cyberSecEval}
 Manish Bhatt, Sahana Chennabasappa, Cyrus Nikolaidis, Shengye Wan, Ivan
   Evtimov, Dominik Gabi, Daniel Song, Faizan Ahmad, Cornelius Aschermann,
-  Lorenzo Fontana, Sasha Frolov, Ravi~Prasad Giri, Dhaval Kapil, Chrisoph
-  Kozyrakis, David LeBlanc, James Milazzo, Andres Straumann, Gabriel Synnaeve,
-  Varun Vontimitta, Spencer Whitman, and Joshua Saxe.
-\newblock {CyberSecEval}: A benchmark for evaluating the cybersecurity risks of
-  large language models.
+  Lorenzo Fontana, Sasha Frolov, Ravi~Prakash Giri, Dhaval Kapil, Yiannis
+  Kozyrakis, David LeBlanc, James Milazzo, Aleksandar Straumann, Gabriel
+  Synnaeve, Varun Vontimitta, Spencer Whitman, and Joshua Saxe.
+\newblock Purple llama {CyberSecEval}: A secure coding benchmark for language
+  models.
 \newblock \emph{arXiv preprint arXiv:2312.04724}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2312.04724}.
 
 \bibitem[Fu and Tantithamthavorn(2022)]{fu2022linevul}
 Michael Fu and Chakkrit Tantithamthavorn.
 \newblock {LineVul}: A transformer-based line-level vulnerability prediction.
-\newblock In \emph{IEEE/ACM International Conference on Mining Software
-  Repositories (MSR)}, 2022.
+\newblock In \emph{2022 IEEE/ACM 19th International Conference on Mining
+  Software Repositories (MSR)}, pages 608--620, 2022.
+\newblock \doi{10.1145/3524842.3528452}.
 
 \bibitem[Jiang et~al.(2023)Jiang, Liu, Lutellier, and Tan]{jiang2023apr}
 Nan Jiang, Kevin Liu, Thibaud Lutellier, and Lin Tan.
 \newblock Impact of code language models on automated program repair.
-\newblock In \emph{IEEE/ACM International Conference on Software Engineering
-  (ICSE)}, 2023.
+\newblock In \emph{2023 IEEE/ACM 45th International Conference on Software
+  Engineering (ICSE)}, pages 1430--1442, 2023.
+\newblock \doi{10.1109/ICSE48619.2023.00125}.
 
 \bibitem[Jimenez et~al.(2024)Jimenez, Yang, Wettig, Yao, Pei, Press, and
   Narasimhan]{swebench}
 Carlos~E. Jimenez, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei, Ofir
   Press, and Karthik Narasimhan.
 \newblock {SWE-bench}: Can language models resolve real-world {GitHub} issues?
-\newblock In \emph{International Conference on Learning Representations
-  (ICLR)}, 2024.
+\newblock In \emph{The Twelfth International Conference on Learning
+  Representations (ICLR)}, 2024.
+\newblock URL \url{https://openreview.net/forum?id=VTF8yNQM66}.
 
-\bibitem[Li et~al.(2023)Li, Zou, Xu, Jin, Zhu, and Chen]{li2023sast}
+\bibitem[Li et~al.(2022)Li, Zou, Xu, Jin, Zhu, and Chen]{li2023sast}
 Zheng Li, Deqing Zou, Shouhuai Xu, Hai Jin, Yawei Zhu, and Zhaoxuan Chen.
-\newblock Sysevr: A framework for using deep learning to detect software
+\newblock {SySeVR}: A framework for using deep learning to detect software
   vulnerabilities.
 \newblock \emph{IEEE Transactions on Dependable and Secure Computing},
-  20\penalty0 (2), 2023.
+  19\penalty0 (4):\penalty0 2244--2258, 2022.
 
 \bibitem[Pearce et~al.(2022)Pearce, Ahmad, Tan, Dolan-Gavitt, and
   Karri]{pearce2022copilot}
@@ -51,48 +55,59 @@ Hammond Pearce, Baleegh Ahmad, Benjamin Tan, Brendan Dolan-Gavitt, and Ramesh
   Karri.
 \newblock Asleep at the keyboard? {A}ssessing the security of {GitHub}
   {Copilot}'s code contributions.
-\newblock In \emph{IEEE Symposium on Security and Privacy (S\&P)}, 2022.
+\newblock In \emph{2022 IEEE Symposium on Security and Privacy (S\&P)}, pages
+  754--768, 2022.
+\newblock \doi{10.1109/SP46214.2022.9833571}.
 
 \bibitem[Pearce et~al.(2023)Pearce, Tan, Ahmad, Karri, and
   Dolan-Gavitt]{pearce2023repair}
 Hammond Pearce, Benjamin Tan, Baleegh Ahmad, Ramesh Karri, and Brendan
   Dolan-Gavitt.
 \newblock Examining zero-shot vulnerability repair with large language models.
-\newblock In \emph{IEEE Symposium on Security and Privacy (S\&P)}, 2023.
+\newblock In \emph{2023 IEEE Symposium on Security and Privacy (S\&P)}, pages
+  2339--2356, 2023.
+\newblock \doi{10.1109/SP46215.2023.10179420}.
 
-\bibitem[Peng et~al.(2025)]{cweval}
-Jinjun Peng et~al.
-\newblock {CWEval}: Outcome-driven evaluation on functional and security
-  quality of code agents.
+\bibitem[Peng et~al.(2025)Peng, Cui, Huang, Yang, and Ray]{cweval}
+Jinjun Peng, Leyi Cui, Kele Huang, Junfeng Yang, and Baishakhi Ray.
+\newblock {CWEval}: Outcome-driven evaluation on functionality and security of
+  {LLM} code generation.
 \newblock \emph{arXiv preprint arXiv:2501.08200}, 2025.
+\newblock URL \url{https://arxiv.org/abs/2501.08200}.
 
 \bibitem[Siddiq and Santos(2022)]{securityeval}
 Mohammed~Latif Siddiq and Joanna C.~S. Santos.
 \newblock {SecurityEval} dataset: Mining vulnerability examples to evaluate
   machine learning-based code generation techniques.
-\newblock In \emph{International Workshop on Mining Software Repositories for
-  Security (MSR4P\&S)}, 2022.
+\newblock In \emph{Proceedings of the 1st International Workshop on Mining
+  Software Repositories Applications for Privacy and Security (MSR4P\&S)},
+  pages 29--33, 2022.
+\newblock \doi{10.1145/3549035.3561184}.
 
 \bibitem[Sobania et~al.(2023)Sobania, Briesch, Hanna, and
   Petke]{sobania2023chatgpt}
 Dominik Sobania, Martin Briesch, Carol Hanna, and Justyna Petke.
 \newblock An analysis of the automatic bug fixing performance of {ChatGPT}.
-\newblock In \emph{IEEE/ACM International Workshop on Automated Program Repair
-  (APR)}, 2023.
+\newblock In \emph{2023 IEEE/ACM International Workshop on Automated Program
+  Repair (APR)}, pages 23--30, 2023.
+\newblock \doi{10.1109/APR59189.2023.00012}.
 
-\bibitem[Thapa et~al.(2022)Thapa, Camtepe, Chhetri, and
-  Camtepe]{thapa2022transformer}
-Chandra Thapa, Seyit Camtepe, Surya~Nepal Chhetri, and Seyit~A. Camtepe.
+\bibitem[Thapa et~al.(2022)Thapa, Jang, Ahmed, Camtepe, Pieprzyk, and
+  Nepal]{thapa2022transformer}
+Chandra Thapa, Seung~Ick Jang, Muhammad~Ejaz Ahmed, Seyit Camtepe, Josef
+  Pieprzyk, and Surya Nepal.
 \newblock Transformer-based language models for software vulnerability
   detection.
 \newblock In \emph{Annual Computer Security Applications Conference (ACSAC)},
-  2022.
+  pages 481--496, 2022.
+\newblock \doi{10.1145/3564625.3567985}.
 
 \bibitem[Xia et~al.(2023)Xia, Wei, and Zhang]{xia2023apr}
 Chunqiu~Steven Xia, Yuxiang Wei, and Lingming Zhang.
 \newblock Automated program repair in the era of large pre-trained language
   models.
-\newblock In \emph{IEEE/ACM International Conference on Software Engineering
-  (ICSE)}, 2023.
+\newblock In \emph{2023 IEEE/ACM 45th International Conference on Software
+  Engineering (ICSE)}, pages 1482--1494, 2023.
+\newblock \doi{10.1109/ICSE48619.2023.00129}.
 
 \end{thebibliography}

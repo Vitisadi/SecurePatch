@@ -86,8 +86,8 @@
 
 Static analysis has long been the default answer to the question of how you
 catch security vulnerabilities before they ship. Tools like Semgrep and CodeQL
-are fast, deterministic, and cheap to run. But they flag patterns, not intent —
-and they cannot generate a fix. Large language models offer a different
+are fast, deterministic, and cheap to run. But they flag patterns, not intent,
+and they do not inherently generate a semantic fix. Large language models offer a different
 trade-off: they read code semantically, can explain why something is dangerous,
 and can propose a patch in the same step. Whether that reasoning is actually
 reliable enough to matter, and for which vulnerability classes, is less settled
@@ -132,9 +132,11 @@ Bandit operate on fixed rule sets: fast, deterministic, and guaranteed to catch
 anything their rules describe. That guarantee is also the limit. A rule that
 does not exist catches nothing. Writing rules requires security expertise most
 development teams do not have. And even when that expertise exists, the rules
-age. New vulnerability patterns emerge faster than rule sets are updated. More
-practically: none of these tools fix what they find. A developer still has to
-read the alert, understand the root cause, and write the patch.
+age. New vulnerability patterns emerge faster than rule sets are updated. More practically: traditional static analysis findings generally still require
+developer remediation. Although tools such as Semgrep support rule-defined and
+AI-assisted autofix mechanisms, they do not inherently generate a semantic
+repair for an arbitrary finding. A developer still has to read the alert,
+understand the root cause, and write the patch.
 
 Large language models enter this space differently. They are not bound by
 explicit rules; they reason about code semantically and can generalize across
@@ -225,12 +227,12 @@ false positives at rates that make triage expensive in practice.
 
 Large language models enter this space differently. Rather than classifying
 against learned patterns, they read code and reason about what it does. Pearce
-et al.\ showed that LLMs could identify security weaknesses in code generated
-by GitHub Copilot~\cite{pearce2022copilot}, and later demonstrated that
-models could detect and explain vulnerabilities in hand-crafted scenarios
-without any task-specific fine-tuning~\cite{pearce2023repair}. Meta's
-CyberSecEval benchmark evaluated frontier models on a range of security tasks
-and found substantial variance across CWE categories~\cite{cyberSecEval}.
+et al.\ showed that GitHub Copilot can produce insecure code for prompts tied
+to high-risk CWE categories~\cite{pearce2022copilot}. Follow-on work examined
+whether large language models could repair vulnerable programs in a zero-shot
+setting~\cite{pearce2023repair}. Meta's CyberSecEval benchmark evaluated
+frontier models on a range of security tasks and found substantial variance
+across security-relevant behaviors~\cite{cyberSecEval}.
 What these studies share is a focus on a single model acting alone. This
 project asks a different question: what happens when you pick one model to
 detect and a different model to fix?
@@ -242,18 +244,19 @@ core idea is that given a failing test and a buggy program, a system should
 be able to produce a patch without human intervention. Early approaches used
 genetic algorithms and constraint-based synthesis. LLMs changed what was
 possible. Xia et al.\ found that pre-trained code models could generate
-correct patches at rates that surpassed prior symbolic methods on standard
-benchmarks~\cite{xia2023apr}, and Jiang et al.\ showed that model scale was
-a reliable predictor of repair success~\cite{jiang2023apr}. Sobania et al.\
+correct patches at rates that surpassed prior APR techniques on standard
+benchmarks and observed a scaling effect in repair performance~\cite{xia2023apr}.
+Jiang et al.\ separately evaluated and fine-tuned code language models for
+automated repair across multiple benchmarks~\cite{jiang2023apr}. Sobania et al.\
 evaluated ChatGPT specifically on the QuixBugs benchmark and found it
 competitive with dedicated APR tools on simple bugs~\cite{sobania2023chatgpt}.
 
 The security repair problem is harder than general APR. A patch that makes a
 test pass is not necessarily a secure patch: it may suppress the symptom
 without removing the vulnerability, or introduce a regression elsewhere.
-Pearce et al.\ examined this directly, finding that LLMs often generated
-plausible-looking but insecure fixes when prompted without explicit security
-guidance~\cite{pearce2023repair}. This project addresses that by using a
+Pearce et al.\ examined this directly, finding that LLM-generated repairs can
+fail to fully remove the underlying vulnerability~\cite{pearce2023repair}.
+This project addresses that by using a
 deterministic oracle that checks both fix success and regression, and by
 separating the detection signal from the repair step so the fixer receives
 an explicit vulnerability description rather than just a failing test.
@@ -415,7 +418,7 @@ syntactically complete file regardless of how large the fix is.
 \begin{tikzpicture}[
   box/.style={rectangle, draw=black, rounded corners=3pt,
               minimum width=1.5cm, minimum height=0.9cm,
-              text centered, font=\small},
+              align=center, font=\small},
   redbox/.style={box, fill=red!10, draw=red!60!black},
   greenbox/.style={box, fill=green!10, draw=green!50!black},
   graybox/.style={box, fill=gray!12, draw=gray!60},
@@ -496,12 +499,12 @@ whichever applies to that case type.
     \toprule
     Model & Role & Recall & Prec. & F1 & Cost \\
     \midrule
-    Sonnet 4.6      & Det + Fix & 100\% & 79\% & 88\% & \$0.330 \\
-    Opus 4.8        & Det + Fix &  91\% & 78\% & 84\% & \$0.731 \\
-    Haiku 4.5       & Det + Fix &  91\% & 72\% & 80\% & \$0.109 \\
-    GPT-5.5         & Det + Fix &  93\% & 91\% & 92\% & \$1.841 \\
-    GPT-4.1-mini    & Det + Fix &  70\% & 85\% & 76\% & \$0.028 \\
-    Gemini 2.5 Flash& Det + Fix &  91\% & 86\% & 89\% & \$0.047 \\
+    Sonnet 4.6      & Det + Fix & 100\% & 79\% & 88\% & \$0.756 \\
+    Opus 4.8        & Det + Fix &  91\% & 78\% & 84\% & \$1.402 \\
+    Haiku 4.5       & Det + Fix &  91\% & 72\% & 80\% & \$0.245 \\
+    GPT-5.5         & Det + Fix &  93\% & 91\% & 92\% & \$2.167 \\
+    GPT-4.1-mini    & Det + Fix &  70\% & 85\% & 76\% & \$0.051 \\
+    Gemini 2.5 Flash& Det + Fix &  91\% & 86\% & 89\% & \$0.085 \\
     Ollama 7b       & Det + Fix &  68\% & 56\% & 61\% & \$0.000 \\
     \midrule
     Regex (custom)  & Detector  &  34\% & 86\% & 49\% & \$0.000 \\
@@ -535,8 +538,8 @@ with a high regression rate indicates a fixer that is too aggressive.
 
 Cost is measured in USD per 56-case run, computed from the actual token
 counts recorded by the provider during each run using published price cards.
-Fixes per dollar is derived from this and gives a practical efficiency metric
-for comparing pipelines at equal quality.
+F1 points per dollar is derived from this and gives a practical efficiency
+metric for comparing pipelines at equal quality.
 
 \subsection{Experimental Controls and v2 Methodology}
 
@@ -544,12 +547,12 @@ All 49 pipeline combinations run on the same 56 cases with the same cached
 detection outputs, the same fixer prompt template, and the same oracle. The
 only variable is which model fills each role.
 
-Two post-hoc corrections were applied to produce the final v2 results. First,
-the Haiku fixer was found to produce outputs with a JSON fence formatting bug
-that caused verdicts to be mis-parsed in earlier runs. Verdicts for all Haiku
-fixer cells were re-derived from the stored raw outputs using the corrected
-parser. All reported numbers reflect these corrections. The raw JSONL outputs are
-preserved in the repository.
+A post-hoc correction was applied to produce the final v2 results. The Haiku
+fixer was found to produce outputs with a JSON fence formatting bug that caused
+verdicts to be mis-parsed in earlier runs. Verdicts for all Haiku fixer cells
+were re-derived from the stored raw outputs using the corrected parser. All
+reported numbers reflect this correction. The raw JSONL outputs are preserved
+in the repository.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Results}
@@ -567,7 +570,7 @@ quality is doing more work than fixing capability.
 
 Ollama is the clear outlier. At 23\,\% fix rate and 28\,\% F1, with 35
 regressions, it is not competitive with any paid model for this task. The gap
-between Ollama and the next-weakest model (Gemini at 50\,\% F1) is larger than
+between Ollama and the next-weakest model (Gemini at 56\,\% F1) is larger than
 the gap between Gemini and the best model.
 
 \begin{table}[H]
@@ -577,14 +580,14 @@ the gap between Gemini and the best model.
   \label{tab:solo}
   \begin{tabular}{lrrrrr}
     \toprule
-    Model & Fix Rate & F1 & Regressions & Cost (\$) & Fixes/\$ \\
+    Model & Fix Rate & F1 & Regressions & Cost (\$) & F1\,pts/\$ \\
     \midrule
-    GPT-5.5        & 64\% & 75\% & 11 & 1.84  & 20   \\
-    Opus 4.8       & 66\% & 70\% & 10 & 0.73  & 51   \\
-    Sonnet 4.6     & 62\% & 67\% & 18 & 0.33  & 106  \\
-    Haiku 4.5      & 59\% & 62\% & 13 & 0.11  & 306  \\
-    GPT-4.1-mini   & 54\% & 63\% & 13 & 0.03  & 1071 \\
-    Gemini 2.5     & 50\% & 56\% & 23 & 0.05  & 596  \\
+    GPT-5.5        & 64\% & 75\% & 11 & 7.10  & 11   \\
+    Opus 4.8       & 66\% & 70\% & 10 & 2.88  & 24   \\
+    Sonnet 4.6     & 62\% & 67\% & 18 & 2.09  & 32   \\
+    Haiku 4.5      & 59\% & 62\% & 13 & 0.29  & 210  \\
+    GPT-4.1-mini   & 54\% & 63\% & 13 & 0.11  & 559  \\
+    Gemini 2.5     & 50\% & 56\% & 23 & 0.17  & 324  \\
     Ollama 7b      & 23\% & 28\% & 35 & 0.00  & free \\
     \bottomrule
   \end{tabular}
@@ -594,19 +597,22 @@ the gap between Gemini and the best model.
 
 Figure~\ref{fig:heatmap} shows F1 for all 49 detector-fixer combinations.
 The row structure is the dominant pattern: pipelines in the GPT-5.5 detector
-row reach 61--75\,\% F1 regardless of which fixer they use, while pipelines
-in the Ollama detector row top out at 50\,\% even with the strongest fixers.
-The column structure is weaker. Switching from the worst fixer (Ollama, 28--42\,\%)
-to the best in a given row (typically Opus or GPT-5.5) adds at most 15
-percentage points, while switching from the worst detector row to the best
-adds up to 33 points.
+row reach 61--75\,\% F1 across the six API-based fixers (Ollama is an outlier
+at 42\,\%), while pipelines in the Ollama detector row top out at 50\,\% even
+with the strongest fixers. The column structure is weaker. Among the six
+API-based fixers, switching from the weakest to the strongest in a given
+detector row adds at most 20 percentage points, while switching from the
+weakest detector row to the best adds up to 28 points across a fixer column.
+Excluding the local Ollama fixer, detector choice accounts for roughly 2.5
+times as much variance in pipeline F1 as fixer choice.
 
-The GPT-5.5 detector row peaks at 75\,\% F1 (GPT-5.5 fix) and 75\,\%
-(GPT-4.1-mini fix), and never falls below 61\,\% (Gemini fix). The Haiku
+The GPT-5.5 detector row peaks at 75\,\% F1 (Opus fix and GPT-5.5 fix)
+and, across the six API-based fixers, never falls below 61\,\% (Gemini fix);
+Ollama is an outlier at 42\,\%. The Haiku
 detector row is the surprise: despite Haiku being a budget model, its row
 reaches 71\,\% F1 (Opus fix) and outperforms the Sonnet and Opus detector
-rows in several columns, because its detection recall is high at 94\,\% with
-only 16 false positives.
+rows in several columns, because its detection recall is high at 91\,\% with
+only 20 false positives.
 
 \begin{figure}[H]
   \centering
@@ -626,9 +632,9 @@ exactly the taint-tracing cases where LLMs should have an advantage over
 static analysis. Table~\ref{tab:percwe} shows detection recall for three
 representative categories. SSRF (CWE-918) is the starkest: Sonnet detects
 all 4 cases, while every other model detects at most 2, and GPT-4.1-mini
-and Ollama detect none. SSRF requires tracing a tainted URL value across
-function calls to a dangerous sink, a task that demands genuine data-flow
-reasoning and cannot be solved by pattern matching alone.
+and Ollama detect none. SSRF requires tracing a tainted URL value through
+data flow within the file to a dangerous sink, a task that demands genuine
+semantic reasoning and cannot be solved by pattern matching alone.
 
 ReDoS (CWE-1333) follows a similar pattern but is less extreme: Sonnet,
 Gemini, and Opus all handle it, while mini and Ollama struggle. SQL injection
@@ -639,7 +645,12 @@ deep semantic reasoning.
 
 \begin{table}[H]
   \centering
-  \caption{Per-CWE detection recall for selected categories.}
+  \caption{Per-CWE detection recall for selected categories. ReDoS n=4
+  includes two CWE-400 cases whose oracle tests verify ReDoS patterns (relabeled
+  from \texttt{resource-exhaustion} after ground-truth correction). SQL injection
+  n=5 includes two CWE-943 cases whose oracle tests verify SQL injection
+  (relabeled from \texttt{nosql-injection}). See Table~\ref{tab:cwes} for the
+  original CWE distribution.}
   \label{tab:percwe}
   \begin{tabular}{lrrrrrr}
     \toprule
@@ -671,7 +682,7 @@ enable higher ceiling F1, regardless of which fixer is chosen.
   \includegraphics[width=0.78\textwidth]{recall_vs_precision_graph.png}
   \caption{Precision vs.\ recall for all detectors. Bubble size encodes false
   positive count. GPT-5.5 achieves the best F1 (92\,\%) through the highest
-  precision (91\,\%). Sonnet achieves perfect recall (100\,\%) but its 17 false
+  precision (91\,\%). Sonnet achieves perfect recall (100\,\%) but its 15 false
   positives lower precision to 79\,\%. Semgrep and Regex fall far to the left,
   confirming that pattern-based tools miss the majority of cases.}
   \label{fig:fp-scatter}
@@ -734,9 +745,9 @@ combination offers the best F1 per dollar of any paid configuration.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.82\textwidth]{7x7_detect_fix_cost_per_f1.png}
-  \caption{Fixes per dollar across all 49 pipeline combinations. Higher is
+  \caption{F1\,points per dollar across all 49 pipeline combinations. Higher is
   better. The $\star$ marks the Haiku detect + GPT-4.1-mini fix cell
-  (620 fixes/\$), the best value of any paid configuration. Ollama-fixer
+  (620 F1\,pts/\$), the best value of any paid configuration. Ollama-fixer
   cells are free but produce unreliable outputs.}
   \label{fig:fixes-per-dollar}
 \end{figure}
@@ -801,12 +812,15 @@ detector multiple times.
 
 \subsection{Why the Detector Matters More Than the Fixer}
 
-The heatmap has a clear structure, and it points in one direction. Vary the
-fixer while holding the detector fixed: F1 swings by at most 15 percentage
-points within a row. Vary the detector while holding the fixer fixed: F1
-swings by up to 33 points across a column. Detector choice appears to explain
-roughly twice as much variance in final pipeline F1 as fixer choice, a result
-that holds consistently across all 49 combinations tested.
+The heatmap has a clear structure, and it points in one direction. Among
+the six API-based fixers (excluding the local Ollama fixer, which is an outlier),
+varying the fixer while holding the detector fixed swings F1 by at most 20
+percentage points within a row. Varying the detector while holding the fixer
+fixed swings F1 by up to 28 points across a column. A two-way variance
+decomposition across the 7$\times$6 API-fixer submatrix shows that detector
+choice accounts for roughly 2.5 times as much variance in final pipeline F1
+as fixer choice, a result that holds consistently across all combinations
+tested.
 
 The mechanism is not subtle. A false positive is not just a wasted alert; it
 is an active penalty. The fixer receives the flagged location, attempts to
@@ -816,9 +830,9 @@ slot it had no chance of filling. The fixer cannot recover from this; it only
 sees what the detector sends.
 
 The ground-truth experiment puts a number on it. Opus fixes 76\,\% of cases
-when given perfect detection and 66\,\% in the real pipeline. That 10-point
-gap is attributable to detection noise, not to any weakness in Opus as a
-fixer. GPT-5.5 tells the opposite story: its detector produces only 5 false
+when given perfect detection and reaches 70\,\% F1 in the real self-pipeline.
+That 6-point gap is attributable to detection noise, not to any weakness in
+Opus as a fixer. GPT-5.5 tells the opposite story: its detector produces only 5 false
 positives, so its real-pipeline F1 (75\,\%) nearly matches its ground-truth
 fix rate (71\,\%). The small positive gap is an artifact of F1 formula
 weighting, not an actual gain from imperfect detection. The takeaway is
@@ -882,13 +896,13 @@ For maximum F1, GPT-5.5 as detector paired with Opus as fixer reaches 75\,\%
 at a combined cost of \$2.83 per 56 cases. GPT-5.5 produces only 5 false
 positives across the benchmark, the cleanest detection of any model tested,
 which gives Opus unusually clean inputs. Opus, in turn, leads all fixers at
-76\,\% when given perfect detection. No other combination in the heatmap
-matches this F1.
+76\,\% when given perfect detection. It ties the GPT-5.5 self-pipeline for the
+highest F1 in the heatmap.
 
 For cost-sensitive deployments, the picture changes considerably. Haiku
 detection paired with GPT-4.1-mini fixing reaches 68\,\% F1 for \$0.11 total,
 roughly 26 times cheaper than the top configuration for a 7 percentage point
-drop. Haiku's 94\,\% detection recall is high enough to catch the large
+drop. Haiku's 91\,\% detection recall is high enough to catch the large
 majority of real vulnerabilities, and mini fixes more than half of what it
 receives. That is a defensible trade for teams where cost is a genuine
 constraint.
@@ -1009,19 +1023,21 @@ answer to both is yes, with important caveats.
 
 On detection, frontier LLMs clearly outperform the regex-based static analysis
 baseline on the local-semantic cases that make up the majority of the
-benchmark. GPT-5.5 reaches 91\,\% detection F1 solo, and a four-model
-frontier ensemble reaches 92\,\%. Static analysis catches syntactic patterns
-reliably but cannot reason about data flow, making it structurally weaker on
-the class of vulnerabilities that requires understanding what a value is and
-where it came from.
+benchmark. GPT-5.5 reaches 92\,\% detection F1 solo, and a four-model
+frontier ensemble reaches 93\,\%. The regex and Semgrep configurations evaluated here catch syntactic patterns
+reliably but underperform on local-semantic vulnerabilities that require
+understanding what a value is and where it came from. More sophisticated static
+analysis tools such as CodeQL support data-flow and taint-tracking analysis,
+but even their community rule sets lagged frontier LLMs on this benchmark's
+task-style cases.
 
 On composition, the 7$\times$7 heatmap shows that pairing a strong detector
 with a capable fixer does improve outcomes over the weakest pairings, but the
-gain is asymmetric. The detector drives the result. Replacing a weak detector
-with a strong one in a fixed column improves F1 by up to 33 percentage points.
-Replacing a weak fixer with a strong one in a fixed row improves F1 by at
-most 15. The practical recommendation follows directly: invest in detection
-quality before optimizing the fixer.
+gain is asymmetric. The detector drives the result. Among API-based fixers, replacing a weak
+detector with a strong one in a fixed column improves F1 by up to 28 percentage
+points. Replacing a weak fixer with a strong one in a fixed row improves F1
+by at most 20. The practical recommendation follows directly: invest in
+detection quality before optimizing the fixer.
 
 The cost analysis reveals that the best accuracy does not require the most
 expensive pipeline. Haiku detection with GPT-4.1-mini fixing reaches 68\,\%
@@ -1033,8 +1049,8 @@ Two findings stand out as the most transferable beyond this specific
 benchmark. First, false positive rate in detection is more important than
 fixer capability for final pipeline F1, a result that holds consistently
 across all 49 combinations tested. Second, the Ollama 7b model is not yet
-viable for either role in a production remediation pipeline, with a 33
-percentage point gap separating it from the next-weakest model.
+viable for either role in a production remediation pipeline, with a large
+gap separating it from the next-weakest model.
 
 % ── References ────────────────────────────────────────────────────────────────
 \newpage
@@ -1049,7 +1065,7 @@ percentage point gap separating it from the next-weakest model.
 
 \begin{table}[H]
   \centering
-  \caption{F1 (\%) for all 49 detector-fixer combinations (v2 methodology).}
+  \caption{F1\,(\%) for all 49 detector-fixer combinations (v2 methodology).}
   \label{tab:full-heatmap}
   \small
   \begin{tabular}{lrrrrrrr}

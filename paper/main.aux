@@ -30,10 +30,10 @@
 \citation{swebench}
 \citation{securityeval}
 \citation{cyberSecEval}
-\citation{cweval}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Automated Program Repair}{6}{subsection.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Existing Benchmarks}{6}{subsection.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Where This Project Fits}{6}{subsection.2.4}\protected@file@percent }
+\citation{cweval}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Where This Project Fits}{7}{subsection.2.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Benchmark Design}{7}{section.3}\protected@file@percent }
 \newlabel{sec:benchmark}{{3}{7}{Benchmark Design}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Case Selection and Dataset Composition}{7}{subsection.3.1}\protected@file@percent }
@@ -62,55 +62,55 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces F1 scores across all 49 detector-fixer combinations. Rows are detectors; columns are fixers. Red boxes highlight the two peak cells (GPT-5.5 $\rightarrow $ Opus and GPT-5.5 $\rightarrow $ GPT-5.5, both 75\,\%). The row pattern dominates: detector choice determines the ceiling more than fixer choice.}}{13}{figure.caption.5}\protected@file@percent }
 \newlabel{fig:heatmap}{{2}{13}{F1 scores across all 49 detector-fixer combinations. Rows are detectors; columns are fixers. Red boxes highlight the two peak cells (GPT-5.5 $\rightarrow $ Opus and GPT-5.5 $\rightarrow $ GPT-5.5, both 75\,\%). The row pattern dominates: detector choice determines the ceiling more than fixer choice}{figure.caption.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Per-CWE Detection Performance}{13}{subsection.5.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Per-CWE detection recall for selected categories.}}{13}{table.caption.6}\protected@file@percent }
-\newlabel{tab:percwe}{{4}{13}{Per-CWE detection recall for selected categories}{table.caption.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Per-CWE detection recall for selected categories. ReDoS n=4 includes two CWE-400 cases whose oracle tests verify ReDoS patterns (relabeled from \texttt  {resource-exhaustion} after ground-truth correction). SQL injection n=5 includes two CWE-943 cases whose oracle tests verify SQL injection (relabeled from \texttt  {nosql-injection}). See Table\nobreakspace  {}\ref {tab:cwes} for the original CWE distribution.}}{14}{table.caption.6}\protected@file@percent }
+\newlabel{tab:percwe}{{4}{14}{Per-CWE detection recall for selected categories. ReDoS n=4 includes two CWE-400 cases whose oracle tests verify ReDoS patterns (relabeled from \texttt {resource-exhaustion} after ground-truth correction). SQL injection n=5 includes two CWE-943 cases whose oracle tests verify SQL injection (relabeled from \texttt {nosql-injection}). See Table~\ref {tab:cwes} for the original CWE distribution}{table.caption.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Detector Quality as the Dominant Variable}{14}{subsection.5.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Precision vs.\ recall for all detectors. Bubble size encodes false positive count. GPT-5.5 achieves the best F1 (92\,\%) through the highest precision (91\,\%). Sonnet achieves perfect recall (100\,\%) but its 17 false positives lower precision to 79\,\%. Semgrep and Regex fall far to the left, confirming that pattern-based tools miss the majority of cases.}}{14}{figure.caption.7}\protected@file@percent }
-\newlabel{fig:fp-scatter}{{3}{14}{Precision vs.\ recall for all detectors. Bubble size encodes false positive count. GPT-5.5 achieves the best F1 (92\,\%) through the highest precision (91\,\%). Sonnet achieves perfect recall (100\,\%) but its 17 false positives lower precision to 79\,\%. Semgrep and Regex fall far to the left, confirming that pattern-based tools miss the majority of cases}{figure.caption.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Ground-Truth Fixer Experiment}{14}{subsection.5.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Fixer performance given perfect detection (56/56 recall, 0 FPs).}}{15}{table.caption.8}\protected@file@percent }
-\newlabel{tab:gt}{{5}{15}{Fixer performance given perfect detection (56/56 recall, 0 FPs)}{table.caption.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Cost-Efficiency Analysis}{15}{subsection.5.6}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Combined detection + fix cost (USD) for all 56 cases across all 49 pipeline combinations. The GPT-5.5 self-pipeline (\$7.10) is the most expensive cell. Haiku detect + GPT-4.1-mini fix (\$0.11) offers the best value among paid pipelines.}}{16}{figure.caption.9}\protected@file@percent }
-\newlabel{fig:pareto}{{4}{16}{Combined detection + fix cost (USD) for all 56 cases across all 49 pipeline combinations. The GPT-5.5 self-pipeline (\$7.10) is the most expensive cell. Haiku detect + GPT-4.1-mini fix (\$0.11) offers the best value among paid pipelines}{figure.caption.9}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Fixes per dollar across all 49 pipeline combinations. Higher is better. The $\star $ marks the Haiku detect + GPT-4.1-mini fix cell (620 fixes/\$), the best value of any paid configuration. Ollama-fixer cells are free but produce unreliable outputs.}}{16}{figure.caption.10}\protected@file@percent }
-\newlabel{fig:fixes-per-dollar}{{5}{16}{Fixes per dollar across all 49 pipeline combinations. Higher is better. The $\star $ marks the Haiku detect + GPT-4.1-mini fix cell (620 fixes/\$), the best value of any paid configuration. Ollama-fixer cells are free but produce unreliable outputs}{figure.caption.10}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Ensemble Detection}{16}{subsection.5.7}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Ensemble detection configurations and their detection-only F1.}}{17}{table.caption.11}\protected@file@percent }
-\newlabel{tab:ensemble}{{6}{17}{Ensemble detection configurations and their detection-only F1}{table.caption.11}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}Effect of Repeated Scanning}{17}{subsection.5.8}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Detection F1 vs.\ number of scans per case. All models decline as scan count increases because additional scans accumulate false positives faster than they recover missed true positives.}}{18}{figure.caption.12}\protected@file@percent }
-\newlabel{fig:scans}{{6}{18}{Detection F1 vs.\ number of scans per case. All models decline as scan count increases because additional scans accumulate false positives faster than they recover missed true positives}{figure.caption.12}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{18}{section.6}\protected@file@percent }
-\newlabel{sec:discussion}{{6}{18}{Discussion}{section.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Why the Detector Matters More Than the Fixer}{18}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Filename Leakage and Model Tier Dependence}{18}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}What Ensemble Detection Buys You}{19}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Practical Pairing Recommendations}{19}{subsection.6.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Threats to Validity}{20}{section.7}\protected@file@percent }
-\newlabel{sec:threats}{{7}{20}{Threats to Validity}{section.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Construct Validity}{20}{subsection.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Internal Validity}{20}{subsection.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}External Validity}{21}{subsection.7.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Reproducibility}{21}{subsection.7.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Future Work}{21}{section.8}\protected@file@percent }
-\newlabel{sec:future}{{8}{21}{Future Work}{section.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusion}{22}{section.9}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Precision vs.\ recall for all detectors. Bubble size encodes false positive count. GPT-5.5 achieves the best F1 (92\,\%) through the highest precision (91\,\%). Sonnet achieves perfect recall (100\,\%) but its 15 false positives lower precision to 79\,\%. Semgrep and Regex fall far to the left, confirming that pattern-based tools miss the majority of cases.}}{15}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:fp-scatter}{{3}{15}{Precision vs.\ recall for all detectors. Bubble size encodes false positive count. GPT-5.5 achieves the best F1 (92\,\%) through the highest precision (91\,\%). Sonnet achieves perfect recall (100\,\%) but its 15 false positives lower precision to 79\,\%. Semgrep and Regex fall far to the left, confirming that pattern-based tools miss the majority of cases}{figure.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Ground-Truth Fixer Experiment}{15}{subsection.5.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Fixer performance given perfect detection (56/56 recall, 0 FPs).}}{16}{table.caption.8}\protected@file@percent }
+\newlabel{tab:gt}{{5}{16}{Fixer performance given perfect detection (56/56 recall, 0 FPs)}{table.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Cost-Efficiency Analysis}{16}{subsection.5.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Combined detection + fix cost (USD) for all 56 cases across all 49 pipeline combinations. The GPT-5.5 self-pipeline (\$7.10) is the most expensive cell. Haiku detect + GPT-4.1-mini fix (\$0.11) offers the best value among paid pipelines.}}{17}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:pareto}{{4}{17}{Combined detection + fix cost (USD) for all 56 cases across all 49 pipeline combinations. The GPT-5.5 self-pipeline (\$7.10) is the most expensive cell. Haiku detect + GPT-4.1-mini fix (\$0.11) offers the best value among paid pipelines}{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces F1\,points per dollar across all 49 pipeline combinations. Higher is better. The $\star $ marks the Haiku detect + GPT-4.1-mini fix cell (620 F1\,pts/\$), the best value of any paid configuration. Ollama-fixer cells are free but produce unreliable outputs.}}{17}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:fixes-per-dollar}{{5}{17}{F1\,points per dollar across all 49 pipeline combinations. Higher is better. The $\star $ marks the Haiku detect + GPT-4.1-mini fix cell (620 F1\,pts/\$), the best value of any paid configuration. Ollama-fixer cells are free but produce unreliable outputs}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Ensemble Detection}{17}{subsection.5.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Ensemble detection configurations and their detection-only F1.}}{18}{table.caption.11}\protected@file@percent }
+\newlabel{tab:ensemble}{{6}{18}{Ensemble detection configurations and their detection-only F1}{table.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}Effect of Repeated Scanning}{18}{subsection.5.8}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Detection F1 vs.\ number of scans per case. All models decline as scan count increases because additional scans accumulate false positives faster than they recover missed true positives.}}{19}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:scans}{{6}{19}{Detection F1 vs.\ number of scans per case. All models decline as scan count increases because additional scans accumulate false positives faster than they recover missed true positives}{figure.caption.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion}{19}{section.6}\protected@file@percent }
+\newlabel{sec:discussion}{{6}{19}{Discussion}{section.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Why the Detector Matters More Than the Fixer}{19}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Filename Leakage and Model Tier Dependence}{20}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}What Ensemble Detection Buys You}{20}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Practical Pairing Recommendations}{21}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Threats to Validity}{21}{section.7}\protected@file@percent }
+\newlabel{sec:threats}{{7}{21}{Threats to Validity}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Construct Validity}{21}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Internal Validity}{22}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}External Validity}{22}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Reproducibility}{22}{subsection.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Future Work}{22}{section.8}\protected@file@percent }
+\newlabel{sec:future}{{8}{22}{Future Work}{section.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusion}{23}{section.9}\protected@file@percent }
 \bibstyle{plainnat}
 \bibdata{references}
 \bibcite{cyberSecEval}{{1}{2023}{{Bhatt et~al.}}{{Bhatt, Chennabasappa, Nikolaidis, Wan, Evtimov, Gabi, Song, Ahmad, Aschermann, Fontana, Frolov, Giri, Kapil, Kozyrakis, LeBlanc, Milazzo, Straumann, Synnaeve, Vontimitta, Whitman, and Saxe}}}
 \bibcite{fu2022linevul}{{2}{2022}{{Fu and Tantithamthavorn}}{{}}}
 \bibcite{jiang2023apr}{{3}{2023}{{Jiang et~al.}}{{Jiang, Liu, Lutellier, and Tan}}}
 \bibcite{swebench}{{4}{2024}{{Jimenez et~al.}}{{Jimenez, Yang, Wettig, Yao, Pei, Press, and Narasimhan}}}
-\bibcite{li2023sast}{{5}{2023}{{Li et~al.}}{{Li, Zou, Xu, Jin, Zhu, and Chen}}}
+\bibcite{li2023sast}{{5}{2022}{{Li et~al.}}{{Li, Zou, Xu, Jin, Zhu, and Chen}}}
 \bibcite{pearce2022copilot}{{6}{2022}{{Pearce et~al.}}{{Pearce, Ahmad, Tan, Dolan-Gavitt, and Karri}}}
 \bibcite{pearce2023repair}{{7}{2023}{{Pearce et~al.}}{{Pearce, Tan, Ahmad, Karri, and Dolan-Gavitt}}}
-\bibcite{cweval}{{8}{2025}{{Peng et~al.}}{{}}}
+\bibcite{cweval}{{8}{2025}{{Peng et~al.}}{{Peng, Cui, Huang, Yang, and Ray}}}
 \bibcite{securityeval}{{9}{2022}{{Siddiq and Santos}}{{}}}
 \bibcite{sobania2023chatgpt}{{10}{2023}{{Sobania et~al.}}{{Sobania, Briesch, Hanna, and Petke}}}
-\bibcite{thapa2022transformer}{{11}{2022}{{Thapa et~al.}}{{Thapa, Camtepe, Chhetri, and Camtepe}}}
+\bibcite{thapa2022transformer}{{11}{2022}{{Thapa et~al.}}{{Thapa, Jang, Ahmed, Camtepe, Pieprzyk, and Nepal}}}
 \bibcite{xia2023apr}{{12}{2023}{{Xia et~al.}}{{Xia, Wei, and Zhang}}}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Full Heatmap Data}{25}{appendix.A}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces F1 (\%) for all 49 detector-fixer combinations (v2 methodology).}}{25}{table.caption.13}\protected@file@percent }
-\newlabel{tab:full-heatmap}{{7}{25}{F1 (\%) for all 49 detector-fixer combinations (v2 methodology)}{table.caption.13}{}}
-\gdef \@abspage@last{26}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Full Heatmap Data}{27}{appendix.A}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces F1\,(\%) for all 49 detector-fixer combinations (v2 methodology).}}{27}{table.caption.13}\protected@file@percent }
+\newlabel{tab:full-heatmap}{{7}{27}{F1\,(\%) for all 49 detector-fixer combinations (v2 methodology)}{table.caption.13}{}}
+\gdef \@abspage@last{28}
